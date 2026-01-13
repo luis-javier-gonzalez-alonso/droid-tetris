@@ -81,6 +81,10 @@ class GameViewModel : ViewModel() {
         movePiece(1, 0)
     }
 
+    fun moveDown() {
+        movePiece(0, 1)
+    }
+
     fun rotate() {
         val currentPiece = _gameState.value.piece ?: return
         val rotatedShape = Array(currentPiece.shape[0].size) { IntArray(currentPiece.shape.size) }

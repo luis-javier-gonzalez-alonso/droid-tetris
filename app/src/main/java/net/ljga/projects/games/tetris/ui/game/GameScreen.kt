@@ -1,7 +1,7 @@
 package net.ljga.projects.games.tetris.ui.game
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
@@ -23,7 +23,8 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
     val currentScore by gameViewModel.currentScore.collectAsState()
     val highScore by gameViewModel.highScore.collectAsState()
 
-    var accumulatedDragX by remember { mutableFloatStateOf(0f) }
+    var accumulatedDragX by remember { mutableStateOf(0f) }
+    var accumulatedDragY by remember { mutableStateOf(0f) }
 
     LaunchedEffect(Unit) {
         gameViewModel.startGame()
@@ -45,19 +46,30 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
                     detectTapGestures(onTap = { gameViewModel.rotate() })
                 }
                 .pointerInput(Unit) {
-                     detectHorizontalDragGestures(
-                        onDragStart = { accumulatedDragX = 0f },
-                        onHorizontalDrag = { change, dragAmount ->
-                            accumulatedDragX += dragAmount
-                            val squareSize = size.width / gameViewModel.boardWidth.toFloat()
+                     detectDragGestures(
+                        onDragStart = { 
+                            accumulatedDragX = 0f 
+                            accumulatedDragY = 0f
+                        },
+                        onDrag = { change, dragAmount ->
+                            accumulatedDragX += dragAmount.x
+                            accumulatedDragY += dragAmount.y
 
-                            val changeSize = squareSize / 4.0
-                            if (accumulatedDragX >= changeSize) {
+                            val squareSizeWidth = (size.width / 4) / gameViewModel.boardWidth.toFloat()
+                            val squareSizeHeight = (size.height / 4) / gameViewModel.boardHeight.toFloat()
+
+                            if (accumulatedDragX > squareSizeWidth) {
                                 gameViewModel.moveRight()
-                                accumulatedDragX = 0f
-                            } else if (accumulatedDragX <= -changeSize) {
+                                accumulatedDragX -= squareSizeWidth
+                            } else if (accumulatedDragX < -squareSizeWidth) {
                                 gameViewModel.moveLeft()
+                                accumulatedDragX += squareSizeWidth
+                            }
+
+                            if (accumulatedDragY > squareSizeHeight) {
+                                gameViewModel.moveDown()
                                 accumulatedDragX = 0f
+                                accumulatedDragY -= squareSizeHeight
                             }
                         }
                     )
