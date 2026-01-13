@@ -7,6 +7,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import android.util.Log
+
+private const val TAG = "GameViewModel"
 
 class GameViewModel : ViewModel() {
 
@@ -32,15 +35,26 @@ class GameViewModel : ViewModel() {
     )
 
     fun startGame() {
-        if (gameJob == null) {
+        if (gameJob == null || gameJob?.isActive == false) {
+            Log.d(TAG, "Starting new game...")
+            _gameState.value = GameState(createEmptyBoard(), null, 0, 0)
             gameJob = viewModelScope.launch {
                 spawnNewPiece()
                 while (true) {
                     delay(500)
-                    if (!movePiece(0, 1)) {
+                    if (!movePiece(0, 1)) { 
+                        Log.d(TAG, "Piece could not move down. Locking piece.")
                         lockPiece()
                         clearLines()
-                        spawnNewPiece()
+                        if (!spawnNewPiece()) { 
+                            Log.d(TAG, "Game Over. Resetting.")
+                            gameJob?.cancel()
+                            gameJob = null
+                            _gameState.value = GameState(createEmptyBoard(), null, 0, 0)
+                            break 
+                        }
+                    } else {
+                        Log.d(TAG, "Piece moved down to (${gameState.value.pieceX}, ${gameState.value.pieceY})")
                     }
                 }
             }
@@ -48,33 +62,48 @@ class GameViewModel : ViewModel() {
     }
 
     fun moveLeft() {
-        movePiece(-1, 0)
+        Log.d(TAG, "Attempting to move left.")
+        if (movePiece(-1, 0)) {
+            Log.d(TAG, "Piece moved left to (${gameState.value.pieceX}, ${gameState.value.pieceY})")
+        } else {
+            Log.d(TAG, "Piece could not move left.")
+        }
     }
 
     fun moveRight() {
-        movePiece(1, 0)
+        Log.d(TAG, "Attempting to move right.")
+        if (movePiece(1, 0)) {
+            Log.d(TAG, "Piece moved right to (${gameState.value.pieceX}, ${gameState.value.pieceY})")
+        } else {
+            Log.d(TAG, "Piece could not move right.")
+        }
     }
 
     fun rotate() {
-        val piece = _gameState.value.piece ?: return
-        val rotatedShape = Array(piece.shape[0].size) { IntArray(piece.shape.size) }
-        for (y in piece.shape.indices) {
-            for (x in piece.shape[y].indices) {
-                rotatedShape[x][piece.shape.size - 1 - y] = piece.shape[y][x]
+        Log.d(TAG, "Attempting to rotate.")
+        val currentPiece = _gameState.value.piece ?: return
+        val rotatedShape = Array(currentPiece.shape[0].size) { IntArray(currentPiece.shape.size) }
+        for (y in currentPiece.shape.indices) {
+            for (x in currentPiece.shape[y].indices) {
+                rotatedShape[x][currentPiece.shape.size - 1 - y] = currentPiece.shape[y][x]
             }
         }
 
-        if (isValidPosition(_gameState.value.pieceX, _gameState.value.pieceY, Piece(rotatedShape, piece.color))) {
-            _gameState.value = _gameState.value.copy(piece = Piece(rotatedShape, piece.color))
+        val newPiece = Piece(rotatedShape, currentPiece.color)
+        if (isValidPosition(_gameState.value.pieceX, _gameState.value.pieceY, newPiece)) {
+            _gameState.value = _gameState.value.copy(piece = newPiece)
+            Log.d(TAG, "Piece rotated successfully.")
+        } else {
+            Log.d(TAG, "Piece could not rotate.")
         }
     }
 
     private fun movePiece(dx: Int, dy: Int): Boolean {
-        val piece = _gameState.value.piece ?: return false
+        val currentPiece = _gameState.value.piece ?: return false
         val newX = _gameState.value.pieceX + dx
         val newY = _gameState.value.pieceY + dy
 
-        if (isValidPosition(newX, newY, piece)) {
+        if (isValidPosition(newX, newY, currentPiece)) {
             _gameState.value = _gameState.value.copy(pieceX = newX, pieceY = newY)
             return true
         }
@@ -85,9 +114,9 @@ class GameViewModel : ViewModel() {
         for (py in piece.shape.indices) {
             for (px in piece.shape[py].indices) {
                 if (piece.shape[py][px] != 0) {
-                    val newX = x + px
-                    val newY = y + py
-                    if (newX < 0 || newX >= boardWidth || newY < 0 || newY >= boardHeight || _gameState.value.board[newY][newX] != 0) {
+                    val boardX = x + px
+                    val boardY = y + py
+                    if (boardX < 0 || boardX >= boardWidth || boardY < 0 || boardY >= boardHeight || _gameState.value.board[boardY][boardX] != 0) {
                         return false
                     }
                 }
@@ -97,52 +126,54 @@ class GameViewModel : ViewModel() {
     }
 
     private fun lockPiece() {
-        val piece = _gameState.value.piece ?: return
+        val currentPiece = _gameState.value.piece ?: return
         val newBoard = _gameState.value.board.map { it.clone() }.toTypedArray()
-        for (py in piece.shape.indices) {
-            for (px in piece.shape[py].indices) {
-                if (piece.shape[py][px] != 0) {
-                    newBoard[_gameState.value.pieceY + py][_gameState.value.pieceX + px] = piece.color
+        for (py in currentPiece.shape.indices) {
+            for (px in currentPiece.shape[py].indices) {
+                if (currentPiece.shape[py][px] != 0) {
+                    val boardX = _gameState.value.pieceX + px
+                    val boardY = _gameState.value.pieceY + py
+                    if (boardY >= 0 && boardY < boardHeight && boardX >= 0 && boardX < boardWidth) {
+                        newBoard[boardY][boardX] = currentPiece.color
+                    }
                 }
             }
         }
-        _gameState.value = _gameState.value.copy(board = newBoard)
+        _gameState.value = _gameState.value.copy(board = newBoard, piece = null) 
     }
 
     private fun clearLines() {
-        val newBoard = _gameState.value.board.toMutableList()
+        val board = _gameState.value.board.toMutableList()
         var linesCleared = 0
-        val iterator = newBoard.iterator()
+        val iterator = board.iterator()
         while(iterator.hasNext()){
             val row = iterator.next()
-            if (row.all { it != 0 }) {
+            if (row.all { it != 0 }) { 
                 iterator.remove()
                 linesCleared++
             }
         }
 
         for (i in 0 until linesCleared) {
-            newBoard.add(0, IntArray(boardWidth))
+            board.add(0, IntArray(boardWidth))
         }
 
         if (linesCleared > 0) {
-            _gameState.value = _gameState.value.copy(board = newBoard.toTypedArray())
+            _gameState.value = _gameState.value.copy(board = board.toTypedArray())
         }
     }
 
-    private fun spawnNewPiece() {
+    private fun spawnNewPiece(): Boolean {
         val newPiece = pieces.random()
-        val newX = boardWidth / 2 - newPiece.shape[0].size / 2
-        val newY = 0
+        val startX = boardWidth / 2 - newPiece.shape[0].size / 2
+        val startY = 0
 
-        if (!isValidPosition(newX, newY, newPiece)) {
-            // Game Over
-            gameJob?.cancel()
-            gameJob = null
-            _gameState.value = GameState(createEmptyBoard(), null, 0, 0) // Reset state
-        } else {
-            _gameState.value = _gameState.value.copy(piece = newPiece, pieceX = newX, pieceY = newY)
+        if (!isValidPosition(startX, startY, newPiece)) {
+            return false 
         }
+        _gameState.value = _gameState.value.copy(piece = newPiece, pieceX = startX, pieceY = startY)
+        Log.d(TAG, "New piece spawned at (${startX}, ${startY}) with color ${newPiece.color}")
+        return true
     }
 
     private fun createEmptyBoard(): Array<IntArray> = Array(boardHeight) { IntArray(boardWidth) }
