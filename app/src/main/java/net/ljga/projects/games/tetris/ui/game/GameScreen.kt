@@ -5,10 +5,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -25,6 +22,8 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
     val gameState by gameViewModel.gameState.collectAsState()
     val currentScore by gameViewModel.currentScore.collectAsState()
     val highScore by gameViewModel.highScore.collectAsState()
+
+    var accumulatedDragX by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(Unit) {
         gameViewModel.startGame()
@@ -46,9 +45,20 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
                     detectTapGestures(onTap = { gameViewModel.rotate() })
                 }
                 .pointerInput(Unit) {
-                    detectHorizontalDragGestures(
-                        onHorizontalDrag = { _, dragAmount ->
-                            if (dragAmount > 0) gameViewModel.moveRight() else gameViewModel.moveLeft()
+                     detectHorizontalDragGestures(
+                        onDragStart = { accumulatedDragX = 0f },
+                        onHorizontalDrag = { change, dragAmount ->
+                            accumulatedDragX += dragAmount
+                            val squareSize = size.width / gameViewModel.boardWidth.toFloat()
+
+                            val changeSize = squareSize / 4.0
+                            if (accumulatedDragX >= changeSize) {
+                                gameViewModel.moveRight()
+                                accumulatedDragX = 0f
+                            } else if (accumulatedDragX <= -changeSize) {
+                                gameViewModel.moveLeft()
+                                accumulatedDragX = 0f
+                            }
                         }
                     )
                 }
@@ -58,13 +68,11 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
 
             drawBoardBackground(gameState.board, squareSize, boardPadding, gameState.clearingLines)
 
-            // Draw the shadow for the next piece
             gameState.nextPiece?.let {
                 val startX = gameViewModel.boardWidth / 2 - it.shape[0].size / 2
                 drawPiece(it, startX, 0, squareSize, boardPadding, alpha = 0.3f)
             }
 
-            // Draw the current falling piece
             gameState.piece?.let {
                 drawPiece(it, gameState.pieceX, gameState.pieceY, squareSize, boardPadding)
             }
