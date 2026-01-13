@@ -16,23 +16,19 @@
 
 package net.ljga.projects.games.tetris.ui
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import net.ljga.projects.games.tetris.ui.game.GameScreen
-import net.ljga.projects.games.tetris.ui.statistics.StatisticsScreen
+import net.ljga.projects.games.tetris.ui.game.MenuScreen
 
 @Composable
 fun MainNavigation() {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = "game") {
-        composable("main") { StatisticsScreen(modifier = Modifier.padding(16.dp)) }
+    NavHost(navController = navController, startDestination = "menu") {
+        composable("menu") { MenuScreen(onStartGame = { navController.navigate("game") }) }
         composable("game") { GameScreen() }
-        // TODO: Add more destinations
     }
 }

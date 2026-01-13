@@ -7,19 +7,18 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import java.util.*
 
 class GameViewModel : ViewModel() {
 
     val boardWidth = 10
     val boardHeight = 20
 
-    private val _gameState = MutableStateFlow(GameState(createEmptyBoard()))
+    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, 0, 0))
     val gameState: StateFlow<GameState> = _gameState
 
-    private var gameJob: Job?
+    private var gameJob: Job? = null
 
-    data class GameState(val board: Array<IntArray>)
+    data class GameState(val board: Array<IntArray>, val piece: Piece?, val pieceX: Int, val pieceY: Int)
     data class Piece(val shape: Array<IntArray>, val color: Int)
 
     private val pieces = listOf(
@@ -32,18 +31,17 @@ class GameViewModel : ViewModel() {
         Piece(arrayOf(intArrayOf(1, 1, 0), intArrayOf(0, 1, 1)), 7)  // Z
     )
 
-    private var currentPiece: Piece = pieces.random()
-    private var currentX = 0
-    private var currentY = 0
-
-    init {
-        gameJob = viewModelScope.launch {
-            while (true) {
-                delay(500)
-                if (!movePiece(0, 1)) {
-                    lockPiece()
-                    clearLines()
-                    spawnNewPiece()
+    fun startGame() {
+        if (gameJob == null) {
+            gameJob = viewModelScope.launch {
+                spawnNewPiece()
+                while (true) {
+                    delay(500)
+                    if (!movePiece(0, 1)) {
+                        lockPiece()
+                        clearLines()
+                        spawnNewPiece()
+                    }
                 }
             }
         }
@@ -58,23 +56,26 @@ class GameViewModel : ViewModel() {
     }
 
     fun rotate() {
-        val rotatedShape = Array(currentPiece.shape[0].size) { IntArray(currentPiece.shape.size) }
-        for (y in currentPiece.shape.indices) {
-            for (x in currentPiece.shape[y].indices) {
-                rotatedShape[x][currentPiece.shape.size - 1 - y] = currentPiece.shape[y][x]
+        val piece = _gameState.value.piece ?: return
+        val rotatedShape = Array(piece.shape[0].size) { IntArray(piece.shape.size) }
+        for (y in piece.shape.indices) {
+            for (x in piece.shape[y].indices) {
+                rotatedShape[x][piece.shape.size - 1 - y] = piece.shape[y][x]
             }
         }
-        if (isValidPosition(currentX, currentY, Piece(rotatedShape, currentPiece.color))) {
-            currentPiece = Piece(rotatedShape, currentPiece.color)
-            updateBoard()
+
+        if (isValidPosition(_gameState.value.pieceX, _gameState.value.pieceY, Piece(rotatedShape, piece.color))) {
+            _gameState.value = _gameState.value.copy(piece = Piece(rotatedShape, piece.color))
         }
     }
 
     private fun movePiece(dx: Int, dy: Int): Boolean {
-        if (isValidPosition(currentX + dx, currentY + dy, currentPiece)) {
-            currentX += dx
-            currentY += dy
-            updateBoard()
+        val piece = _gameState.value.piece ?: return false
+        val newX = _gameState.value.pieceX + dx
+        val newY = _gameState.value.pieceY + dy
+
+        if (isValidPosition(newX, newY, piece)) {
+            _gameState.value = _gameState.value.copy(pieceX = newX, pieceY = newY)
             return true
         }
         return false
@@ -96,53 +97,52 @@ class GameViewModel : ViewModel() {
     }
 
     private fun lockPiece() {
+        val piece = _gameState.value.piece ?: return
         val newBoard = _gameState.value.board.map { it.clone() }.toTypedArray()
-        for (py in currentPiece.shape.indices) {
-            for (px in currentPiece.shape[py].indices) {
-                if (currentPiece.shape[py][px] != 0) {
-                    newBoard[currentY + py][currentX + px] = currentPiece.color
+        for (py in piece.shape.indices) {
+            for (px in piece.shape[py].indices) {
+                if (piece.shape[py][px] != 0) {
+                    newBoard[_gameState.value.pieceY + py][_gameState.value.pieceX + px] = piece.color
                 }
             }
         }
-        _gameState.value = GameState(newBoard)
+        _gameState.value = _gameState.value.copy(board = newBoard)
     }
 
     private fun clearLines() {
         val newBoard = _gameState.value.board.toMutableList()
         var linesCleared = 0
-        for (y in newBoard.indices.reversed()) {
-            if (newBoard[y].all { it != 0 }) {
-                newBoard.removeAt(y)
+        val iterator = newBoard.iterator()
+        while(iterator.hasNext()){
+            val row = iterator.next()
+            if (row.all { it != 0 }) {
+                iterator.remove()
                 linesCleared++
             }
         }
+
         for (i in 0 until linesCleared) {
             newBoard.add(0, IntArray(boardWidth))
         }
-        _gameState.value = GameState(newBoard.toTypedArray())
+
+        if (linesCleared > 0) {
+            _gameState.value = _gameState.value.copy(board = newBoard.toTypedArray())
+        }
     }
 
     private fun spawnNewPiece() {
-        currentPiece = pieces.random()
-        currentX = boardWidth / 2 - currentPiece.shape[0].size / 2
-        currentY = 0
-        if (!isValidPosition(currentX, currentY, currentPiece)) {
+        val newPiece = pieces.random()
+        val newX = boardWidth / 2 - newPiece.shape[0].size / 2
+        val newY = 0
+
+        if (!isValidPosition(newX, newY, newPiece)) {
             // Game Over
             gameJob?.cancel()
+            gameJob = null
+            _gameState.value = GameState(createEmptyBoard(), null, 0, 0) // Reset state
+        } else {
+            _gameState.value = _gameState.value.copy(piece = newPiece, pieceX = newX, pieceY = newY)
         }
-    }
-
-    private fun updateBoard() {
-        val newBoard = _gameState.value.board.map { it.clone() }.toTypedArray()
-        // Draw current piece on a temporary board
-        for (py in currentPiece.shape.indices) {
-            for (px in currentPiece.shape[py].indices) {
-                if (currentPiece.shape[py][px] != 0) {
-                    newBoard[currentY + py][currentX + px] = currentPiece.color
-                }
-            }
-        }
-        _gameState.value = GameState(newBoard)
     }
 
     private fun createEmptyBoard(): Array<IntArray> = Array(boardHeight) { IntArray(boardWidth) }
