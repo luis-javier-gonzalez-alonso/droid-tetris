@@ -16,7 +16,7 @@ class GameViewModel : ViewModel() {
     val boardWidth = 10
     val boardHeight = 20
 
-    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, 0, 0, 0, emptyList()))
+    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, null, 0, 0, emptyList()))
     val gameState: StateFlow<GameState> = _gameState
 
     private var _currentScore = MutableStateFlow(0)
@@ -27,7 +27,7 @@ class GameViewModel : ViewModel() {
 
     private var gameJob: Job? = null
 
-    data class GameState(val board: Array<IntArray>, val piece: Piece?, val pieceX: Int, val pieceY: Int, val ghostY: Int, val clearingLines: List<Int>)
+    data class GameState(val board: Array<IntArray>, val piece: Piece?, val nextPiece: Piece?, val pieceX: Int, val pieceY: Int, val clearingLines: List<Int>)
     data class Piece(val shape: Array<IntArray>, val color: Int)
 
     private val pieces = listOf(
@@ -43,33 +43,30 @@ class GameViewModel : ViewModel() {
     fun startGame() {
         if (gameJob == null || gameJob?.isActive == false) {
             Log.d(TAG, "Starting new game...")
-            _gameState.value = GameState(createEmptyBoard(), null, 0, 0, 0, emptyList())
+            _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), 0, 0, emptyList())
             _currentScore.value = 0 // Reset score
             gameJob = viewModelScope.launch {
                 spawnNewPiece()
                 while (true) {
                     delay(500)
-                    if (!movePiece(0, 1)) { 
+                    if (!movePiece(0, 1)) {
                         Log.d(TAG, "Piece could not move down. Locking piece.")
                         lockPiece()
-                        val linesCleared = clearLines() // Get number of lines cleared
-                        updateScore(linesCleared) // Update score based on lines cleared
+                        val linesCleared = clearLines()
+                        updateScore(linesCleared)
                         if (linesCleared > 0) {
-                            delay(300) // Delay for animation
-                            _gameState.value = _gameState.value.copy(clearingLines = emptyList()) // Reset clearing lines
+                            delay(300)
+                            _gameState.value = _gameState.value.copy(clearingLines = emptyList())
                         }
-                        if (!spawnNewPiece()) { 
+                        if (!spawnNewPiece()) {
                             Log.d(TAG, "Game Over. Resetting.")
                             if (_currentScore.value > _highScore.value) {
                                 _highScore.value = _currentScore.value
                             }
                             gameJob?.cancel()
                             gameJob = null
-                            _gameState.value = GameState(createEmptyBoard(), null, 0, 0, 0, emptyList())
-                            break 
+                            break
                         }
-                    } else {
-                        Log.d(TAG, "Piece moved down to (${gameState.value.pieceX}, ${gameState.value.pieceY})")
                     }
                 }
             }
@@ -77,15 +74,11 @@ class GameViewModel : ViewModel() {
     }
 
     fun moveLeft() {
-        if (movePiece(-1, 0)) {
-            updateGhost()
-        }
+        movePiece(-1, 0)
     }
 
     fun moveRight() {
-        if (movePiece(1, 0)) {
-            updateGhost()
-        }
+        movePiece(1, 0)
     }
 
     fun rotate() {
@@ -96,11 +89,9 @@ class GameViewModel : ViewModel() {
                 rotatedShape[x][currentPiece.shape.size - 1 - y] = currentPiece.shape[y][x]
             }
         }
-
         val newPiece = Piece(rotatedShape, currentPiece.color)
         if (isValidPosition(_gameState.value.pieceX, _gameState.value.pieceY, newPiece)) {
             _gameState.value = _gameState.value.copy(piece = newPiece)
-            updateGhost()
         }
     }
 
@@ -111,7 +102,6 @@ class GameViewModel : ViewModel() {
 
         if (isValidPosition(newX, newY, currentPiece)) {
             _gameState.value = _gameState.value.copy(pieceX = newX, pieceY = newY)
-            if (dy > 0) updateGhost()
             return true
         }
         return false
@@ -146,21 +136,16 @@ class GameViewModel : ViewModel() {
                 }
             }
         }
-        _gameState.value = _gameState.value.copy(board = newBoard, piece = null) 
+        _gameState.value = _gameState.value.copy(board = newBoard, piece = null)
     }
 
     private suspend fun clearLines(): Int {
         val board = _gameState.value.board
-        val linesToClear = mutableListOf<Int>()
-        for (y in board.indices) {
-            if (board[y].all { it != 0 }) {
-                linesToClear.add(y)
-            }
-        }
+        val linesToClear = board.indices.filter { y -> board[y].all { it != 0 } }
 
         if (linesToClear.isNotEmpty()) {
             _gameState.value = _gameState.value.copy(clearingLines = linesToClear)
-            delay(300) // Animation delay
+            delay(300)
 
             val newBoard = board.toMutableList()
             linesToClear.reversed().forEach { newBoard.removeAt(it) }
@@ -179,30 +164,26 @@ class GameViewModel : ViewModel() {
                 4 -> 1000
                 else -> 0
             }
-            _currentScore.value += points * linesCleared
+            _currentScore.value += points
         }
     }
 
     private fun spawnNewPiece(): Boolean {
-        val newPiece = pieces.random()
+        val newPiece = _gameState.value.nextPiece ?: pieces.random()
         val startX = boardWidth / 2 - newPiece.shape[0].size / 2
         val startY = 0
 
         if (!isValidPosition(startX, startY, newPiece)) {
-            return false 
+            return false // Game Over
         }
-        _gameState.value = _gameState.value.copy(piece = newPiece, pieceX = startX, pieceY = startY)
-        updateGhost()
-        return true
-    }
 
-    private fun updateGhost() {
-        val piece = _gameState.value.piece ?: return
-        var ghostY = _gameState.value.pieceY
-        while (isValidPosition(_gameState.value.pieceX, ghostY + 1, piece)) {
-            ghostY++
-        }
-        _gameState.value = _gameState.value.copy(ghostY = ghostY)
+        _gameState.value = _gameState.value.copy(
+            piece = newPiece,
+            nextPiece = pieces.random(),
+            pieceX = startX,
+            pieceY = startY
+        )
+        return true
     }
 
     private fun createEmptyBoard(): Array<IntArray> = Array(boardHeight) { IntArray(boardWidth) }

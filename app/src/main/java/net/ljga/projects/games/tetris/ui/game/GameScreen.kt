@@ -1,6 +1,5 @@
 package net.ljga.projects.games.tetris.ui.game
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -44,29 +43,29 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
                 .padding(8.dp)
                 .aspectRatio(gameViewModel.boardWidth.toFloat() / gameViewModel.boardHeight.toFloat())
                 .pointerInput(Unit) {
-                    detectTapGestures(onTap = {
-                        gameViewModel.rotate()
-                    })
+                    detectTapGestures(onTap = { gameViewModel.rotate() })
                 }
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures(
-                        onHorizontalDrag = { change, dragAmount ->
-                            if (dragAmount > 0) {
-                                gameViewModel.moveRight()
-                            } else {
-                                gameViewModel.moveLeft()
-                            }
+                        onHorizontalDrag = { _, dragAmount ->
+                            if (dragAmount > 0) gameViewModel.moveRight() else gameViewModel.moveLeft()
                         }
                     )
                 }
         ) {
             val squareSize = minOf(size.width / gameViewModel.boardWidth, size.height / gameViewModel.boardHeight)
-            val boardPadding = 4.dp.toPx()
+            val boardPadding = 2.dp.toPx()
 
             drawBoardBackground(gameState.board, squareSize, boardPadding, gameState.clearingLines)
 
+            // Draw the shadow for the next piece
+            gameState.nextPiece?.let {
+                val startX = gameViewModel.boardWidth / 2 - it.shape[0].size / 2
+                drawPiece(it, startX, 0, squareSize, boardPadding, alpha = 0.3f)
+            }
+
+            // Draw the current falling piece
             gameState.piece?.let {
-                drawGhostPiece(it, gameState.pieceX, gameState.ghostY, squareSize, boardPadding)
                 drawPiece(it, gameState.pieceX, gameState.pieceY, squareSize, boardPadding)
             }
         }
@@ -88,26 +87,12 @@ private fun DrawScope.drawBoardBackground(board: Array<IntArray>, squareSize: Fl
     }
 }
 
-private fun DrawScope.drawPiece(piece: GameViewModel.Piece, x: Int, y: Int, squareSize: Float, padding: Float) {
+private fun DrawScope.drawPiece(piece: GameViewModel.Piece, x: Int, y: Int, squareSize: Float, padding: Float, alpha: Float = 1f) {
     piece.shape.forEachIndexed { row_idx, row ->
         row.forEachIndexed { col_idx, value ->
             if (value != 0) {
                 drawRect(
-                    color = colorFor(piece.color),
-                    topLeft = Offset((x + col_idx) * squareSize + padding, (y + row_idx) * squareSize + padding),
-                    size = Size(squareSize - 2 * padding, squareSize - 2 * padding)
-                )
-            }
-        }
-    }
-}
-
-private fun DrawScope.drawGhostPiece(piece: GameViewModel.Piece, x: Int, y: Int, squareSize: Float, padding: Float) {
-    piece.shape.forEachIndexed { row_idx, row ->
-        row.forEachIndexed { col_idx, value ->
-            if (value != 0) {
-                drawRect(
-                    color = colorFor(piece.color).copy(alpha = 0.3f),
+                    color = colorFor(piece.color).copy(alpha = alpha),
                     topLeft = Offset((x + col_idx) * squareSize + padding, (y + row_idx) * squareSize + padding),
                     size = Size(squareSize - 2 * padding, squareSize - 2 * padding)
                 )
