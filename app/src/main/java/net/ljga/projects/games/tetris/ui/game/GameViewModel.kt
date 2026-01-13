@@ -19,6 +19,9 @@ class GameViewModel : ViewModel() {
     private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, 0, 0))
     val gameState: StateFlow<GameState> = _gameState
 
+    private var _currentScore = MutableStateFlow(0)
+    val currentScore: StateFlow<Int> = _currentScore
+
     private var gameJob: Job? = null
 
     data class GameState(val board: Array<IntArray>, val piece: Piece?, val pieceX: Int, val pieceY: Int)
@@ -38,6 +41,7 @@ class GameViewModel : ViewModel() {
         if (gameJob == null || gameJob?.isActive == false) {
             Log.d(TAG, "Starting new game...")
             _gameState.value = GameState(createEmptyBoard(), null, 0, 0)
+            _currentScore.value = 0 // Reset score
             gameJob = viewModelScope.launch {
                 spawnNewPiece()
                 while (true) {
@@ -45,7 +49,8 @@ class GameViewModel : ViewModel() {
                     if (!movePiece(0, 1)) { 
                         Log.d(TAG, "Piece could not move down. Locking piece.")
                         lockPiece()
-                        clearLines()
+                        val linesCleared = clearLines() // Get number of lines cleared
+                        updateScore(linesCleared) // Update score based on lines cleared
                         if (!spawnNewPiece()) { 
                             Log.d(TAG, "Game Over. Resetting.")
                             gameJob?.cancel()
@@ -142,7 +147,8 @@ class GameViewModel : ViewModel() {
         _gameState.value = _gameState.value.copy(board = newBoard, piece = null) 
     }
 
-    private fun clearLines() {
+    // Returns the number of lines cleared
+    private fun clearLines(): Int {
         val board = _gameState.value.board.toMutableList()
         var linesCleared = 0
         val iterator = board.iterator()
@@ -160,6 +166,21 @@ class GameViewModel : ViewModel() {
 
         if (linesCleared > 0) {
             _gameState.value = _gameState.value.copy(board = board.toTypedArray())
+        }
+        return linesCleared
+    }
+
+    private fun updateScore(linesCleared: Int) {
+        if (linesCleared > 0) {
+            val points = when (linesCleared) {
+                1 -> 100
+                2 -> 300
+                3 -> 600
+                4 -> 1000
+                else -> 0 // Should not happen with Tetris rules
+            }
+            _currentScore.value += points * linesCleared // Geometric progression factor applied here
+            Log.d(TAG, "Lines cleared: $linesCleared, Score: ${_currentScore.value}")
         }
     }
 
