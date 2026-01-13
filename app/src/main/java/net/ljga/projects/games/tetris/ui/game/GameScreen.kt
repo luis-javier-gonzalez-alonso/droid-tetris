@@ -1,5 +1,6 @@
 package net.ljga.projects.games.tetris.ui.game
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -24,23 +25,24 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
     val gameState by gameViewModel.gameState.collectAsState()
     val currentScore by gameViewModel.currentScore.collectAsState()
+    val highScore by gameViewModel.highScore.collectAsState()
 
     LaunchedEffect(Unit) {
         gameViewModel.startGame()
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Score Display
-        Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
             Text("Score: $currentScore")
+            Text("High Score: $highScore")
         }
 
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(8.dp) // Padding around the entire canvas area
-                .aspectRatio(gameViewModel.boardWidth.toFloat() / gameViewModel.boardHeight.toFloat()) // Maintain aspect ratio
+                .padding(8.dp)
+                .aspectRatio(gameViewModel.boardWidth.toFloat() / gameViewModel.boardHeight.toFloat())
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = {
                         gameViewModel.rotate()
@@ -59,23 +61,25 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
                 }
         ) {
             val squareSize = minOf(size.width / gameViewModel.boardWidth, size.height / gameViewModel.boardHeight)
-            val boardPadding = 4.dp.toPx() // Small padding for the board frame
+            val boardPadding = 4.dp.toPx()
 
-            drawBoardBackground(gameState.board, squareSize, boardPadding)
+            drawBoardBackground(gameState.board, squareSize, boardPadding, gameState.clearingLines)
 
             gameState.piece?.let {
+                drawGhostPiece(it, gameState.pieceX, gameState.ghostY, squareSize, boardPadding)
                 drawPiece(it, gameState.pieceX, gameState.pieceY, squareSize, boardPadding)
             }
         }
     }
 }
 
-private fun DrawScope.drawBoardBackground(board: Array<IntArray>, squareSize: Float, padding: Float) {
+private fun DrawScope.drawBoardBackground(board: Array<IntArray>, squareSize: Float, padding: Float, clearingLines: List<Int>) {
     board.forEachIndexed { y, row ->
+        val alpha = if (clearingLines.contains(y)) 0.5f else 1f
         row.forEachIndexed { x, color ->
-            if (color != 0) { 
+            if (color != 0) {
                 drawRect(
-                    color = colorFor(color),
+                    color = colorFor(color).copy(alpha = alpha),
                     topLeft = Offset(x * squareSize + padding, y * squareSize + padding),
                     size = Size(squareSize - 2 * padding, squareSize - 2 * padding)
                 )
@@ -87,9 +91,23 @@ private fun DrawScope.drawBoardBackground(board: Array<IntArray>, squareSize: Fl
 private fun DrawScope.drawPiece(piece: GameViewModel.Piece, x: Int, y: Int, squareSize: Float, padding: Float) {
     piece.shape.forEachIndexed { row_idx, row ->
         row.forEachIndexed { col_idx, value ->
-            if (value != 0) { 
+            if (value != 0) {
                 drawRect(
                     color = colorFor(piece.color),
+                    topLeft = Offset((x + col_idx) * squareSize + padding, (y + row_idx) * squareSize + padding),
+                    size = Size(squareSize - 2 * padding, squareSize - 2 * padding)
+                )
+            }
+        }
+    }
+}
+
+private fun DrawScope.drawGhostPiece(piece: GameViewModel.Piece, x: Int, y: Int, squareSize: Float, padding: Float) {
+    piece.shape.forEachIndexed { row_idx, row ->
+        row.forEachIndexed { col_idx, value ->
+            if (value != 0) {
+                drawRect(
+                    color = colorFor(piece.color).copy(alpha = 0.3f),
                     topLeft = Offset((x + col_idx) * squareSize + padding, (y + row_idx) * squareSize + padding),
                     size = Size(squareSize - 2 * padding, squareSize - 2 * padding)
                 )
