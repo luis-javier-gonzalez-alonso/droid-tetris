@@ -160,7 +160,9 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             val unlockedMutationNames = preferenceDataStore.unlockedMutations.first()
             val unlockedMutations = allMutations.filter { unlockedMutationNames.contains(it.name) }
 
-            _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, emptyList(), unlockedMutations, null)
+            val startingMutation = if (unlockedMutations.isNotEmpty()) listOf(unlockedMutations.random()) else emptyList()
+
+            _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, emptyList(), startingMutation, null)
             applyStartingMutations()
 
             preferenceDataStore.clearGameState()
@@ -367,6 +369,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                 if (currentBoss.requiredLines <= 0) {
                     _gameState.value = _gameState.value.copy(currentScore = _gameState.value.currentScore + 5000 * _gameState.value.level)
                     unlockNextMutation()
+                    addRandomMutationToRun()
                     currentBoss = null
                 }
             }
@@ -408,6 +411,15 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         val nextMutation = allMutations.firstOrNull { !unlockedNames.contains(it.name) }
         if (nextMutation != null) {
             preferenceDataStore.unlockMutation(nextMutation.name)
+        }
+    }
+
+    private suspend fun addRandomMutationToRun() {
+        val unlockedMutationNames = preferenceDataStore.unlockedMutations.first()
+        val availableMutations = allMutations.filter { unlockedMutationNames.contains(it.name) && !_gameState.value.selectedMutations.contains(it) }
+        if (availableMutations.isNotEmpty()) {
+            val newMutation = availableMutations.random()
+            _gameState.value = _gameState.value.copy(selectedMutations = _gameState.value.selectedMutations + newMutation)
         }
     }
 
