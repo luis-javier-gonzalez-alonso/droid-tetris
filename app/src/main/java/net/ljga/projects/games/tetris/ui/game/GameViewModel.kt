@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import android.util.Log
+import java.util.Random
 
 private const val TAG = "GameViewModel"
 
@@ -176,6 +177,11 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             val newBoard = state.board.clone()
             for (i in 0 until boardWidth) {
                 newBoard[boardHeight - 1][i] = 8 // Garbage block color
+            }
+            val random = Random()
+            val indicesToRemove = (0 until boardWidth).shuffled(random).take(3)
+            for (i in indicesToRemove) {
+                newBoard[boardHeight - 1][i] = 0
             }
             _gameState.value = state.copy(board = newBoard)
         }
