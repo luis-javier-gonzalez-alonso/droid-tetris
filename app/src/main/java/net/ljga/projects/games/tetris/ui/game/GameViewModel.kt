@@ -25,18 +25,21 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     private var _highScore = MutableStateFlow(0)
     val highScore: StateFlow<Int> = _highScore
 
+    private var _mutations = MutableStateFlow<List<Mutation>>(emptyList())
+    val mutations: StateFlow<List<Mutation>> = _mutations
+
     private var gameJob: Job? = null
 
     init {
         viewModelScope.launch {
             _highScore.value = preferenceDataStore.highScore.first()
             val unlockedMutationNames = preferenceDataStore.unlockedMutations.first()
-            val unlockedMutations = allMutations.filter { unlockedMutationNames.contains(it.name) }
-            val startingMutation = if (unlockedMutations.isNotEmpty()) listOf(unlockedMutations.random()) else emptyList()
+            _mutations.value = allMutations.filter { unlockedMutationNames.contains(it.name) }
 
             preferenceDataStore.gameState.first()?.let {
-                _gameState.value = it.copy(selectedMutations = startingMutation)
+                _gameState.value = it
             } ?: run {
+                val startingMutation = if (_mutations.value.isNotEmpty()) listOf(_mutations.value.random()) else emptyList()
                 _gameState.value = _gameState.value.copy(selectedMutations = startingMutation)
             }
         }
@@ -466,9 +469,11 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
     private suspend fun unlockNextMutation() {
         val unlockedNames = preferenceDataStore.unlockedMutations.first()
-        val nextMutation = allMutations.firstOrNull { !unlockedNames.contains(it.name) }
-        if (nextMutation != null) {
+        val availableToUnlock = allMutations.filter { !unlockedNames.contains(it.name) }
+        if (availableToUnlock.isNotEmpty()) {
+            val nextMutation = availableToUnlock.random()
             preferenceDataStore.unlockMutation(nextMutation.name)
+            _mutations.value = _mutations.value + nextMutation
         }
     }
 

@@ -30,7 +30,6 @@ import net.ljga.projects.games.tetris.ui.game.MutationsScreen
 @Composable
 fun MainNavigation(gameViewModel: GameViewModel) {
     val navController = rememberNavController()
-    val gameState by gameViewModel.gameState.collectAsState()
 
     NavHost(navController = navController, startDestination = "menu") {
         composable("menu") {
@@ -55,10 +54,7 @@ fun MainNavigation(gameViewModel: GameViewModel) {
             }
         }
         composable("mutations") {
-            MutationsScreen(
-                allMutations = gameViewModel.allMutations,
-                unlockedMutations = gameState.selectedMutations
-            )
+            MutationsScreen(gameViewModel)
         }
     }
 }
