@@ -125,16 +125,16 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
     data class Boss(val name: String, var requiredLines: Int)
 
+    val allMutations = listOf(
+        Mutation("Unyielding", "Start with one line of garbage blocks"),
+        Mutation("Feather Fall", "Pieces fall 20% slower"),
+        Mutation("Clairvoyance", "See the next two pieces instead of one")
+    )
+
     private val allArtifacts = listOf(
         Artifact("Swiftness Charm", "Increases piece drop speed by 10%"),
         Artifact("Line Clearer", "Clears an extra line randomly"),
         Artifact("Score Multiplier", "Multiplies score from line clears by 1.5x")
-    )
-
-    private val allMutations = listOf(
-        Mutation("Unyielding", "Start with one line of garbage blocks"),
-        Mutation("Feather Fall", "Pieces fall 20% slower"),
-        Mutation("Clairvoyance", "See the next two pieces instead of one")
     )
 
     private val bosses = listOf(

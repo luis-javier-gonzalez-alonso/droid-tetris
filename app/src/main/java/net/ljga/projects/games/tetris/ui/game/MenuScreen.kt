@@ -18,7 +18,8 @@ import androidx.compose.ui.unit.dp
 fun MenuScreen(
     gameViewModel: GameViewModel,
     onContinue: () -> Unit,
-    onNewGame: () -> Unit
+    onNewGame: () -> Unit,
+    onMutations: () -> Unit
 ) {
     val gameState by gameViewModel.gameState.collectAsState()
     val highScore by gameViewModel.highScore.collectAsState()
@@ -40,6 +41,12 @@ fun MenuScreen(
 
         Button(onClick = onNewGame) {
             Text("New Game")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(onClick = onMutations) {
+            Text("Mutations")
         }
     }
 }
