@@ -20,77 +20,100 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
     val gameState by gameViewModel.gameState.collectAsState()
-    val currentScore by gameViewModel.currentScore.collectAsState()
 
-    var accumulatedDragX by remember { mutableStateOf(0f) }
-    var accumulatedDragY by remember { mutableStateOf(0f) }
+    var accumulatedDragX by remember { mutableFloatStateOf(0f) }
+    var accumulatedDragY by remember { mutableFloatStateOf(0f) }
 
-    LaunchedEffect(Unit) {
-        gameViewModel.startGame()
+    DisposableEffect(Unit) {
+        onDispose {
+            gameViewModel.pauseGame()
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-            Text("Score: $currentScore")
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Text("Score: ${gameState.currentScore}")
         }
 
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(8.dp)
-                .aspectRatio(gameViewModel.boardWidth.toFloat() / gameViewModel.boardHeight.toFloat())
-                .pointerInput(Unit) {
-                    detectTapGestures(onTap = { gameViewModel.rotate() })
-                }
-                .pointerInput(Unit) {
-                     detectDragGestures(
-                        onDragStart = { 
-                            accumulatedDragX = 0f 
-                            accumulatedDragY = 0f
-                        },
-                        onDrag = { change, dragAmount ->
-                            accumulatedDragX += dragAmount.x
-                            accumulatedDragY += dragAmount.y
-
-                            val squareSizeWidth = (size.width / 4) / gameViewModel.boardWidth.toFloat()
-                            val squareSizeHeight = (size.height / 4) / gameViewModel.boardHeight.toFloat()
-
-                            if (accumulatedDragX > squareSizeWidth) {
-                                gameViewModel.moveRight()
-                                accumulatedDragX -= squareSizeWidth
-                            } else if (accumulatedDragX < -squareSizeWidth) {
-                                gameViewModel.moveLeft()
-                                accumulatedDragX += squareSizeWidth
-                            }
-
-                            if (accumulatedDragY > squareSizeHeight) {
-                                gameViewModel.moveDown()
-                                accumulatedDragX = 0f
-                                accumulatedDragY -= squareSizeHeight
-                            }
-                        }
-                    )
-                }
+        Box(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            contentAlignment = Alignment.Center
         ) {
-            val squareSize = minOf(size.width / gameViewModel.boardWidth, size.height / gameViewModel.boardHeight)
-            val boardPadding = 2.dp.toPx()
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
+                    .aspectRatio(gameViewModel.boardWidth.toFloat() / gameViewModel.boardHeight.toFloat())
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = { gameViewModel.rotate() })
+                    }
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = {
+                                accumulatedDragX = 0f
+                                accumulatedDragY = 0f
+                            },
+                            onDrag = { change, dragAmount ->
+                                accumulatedDragX += dragAmount.x
+                                accumulatedDragY += dragAmount.y
 
-            drawBoardBackground(gameState.board, squareSize, boardPadding, gameState.clearingLines)
+                                val squareSizeWidth =
+                                    (size.width / 4) / gameViewModel.boardWidth.toFloat()
+                                val squareSizeHeight =
+                                    (size.height / 4) / gameViewModel.boardHeight.toFloat()
 
-            gameState.nextPiece?.let {
-                val startX = gameViewModel.boardWidth / 2 - it.shape[0].size / 2
-                drawPiece(it, startX, 0, squareSize, boardPadding, alpha = 0.3f)
-            }
+                                if (accumulatedDragX > squareSizeWidth) {
+                                    gameViewModel.moveRight()
+                                    accumulatedDragX -= squareSizeWidth
+                                } else if (accumulatedDragX < -squareSizeWidth) {
+                                    gameViewModel.moveLeft()
+                                    accumulatedDragX += squareSizeWidth
+                                }
 
-            gameState.piece?.let {
-                drawPiece(it, gameState.pieceX, gameState.pieceY, squareSize, boardPadding)
+                                if (accumulatedDragY > squareSizeHeight) {
+                                    gameViewModel.moveDown()
+                                    accumulatedDragX = 0f
+                                    accumulatedDragY -= squareSizeHeight
+                                }
+                            }
+                        )
+                    }
+            ) {
+                val squareSize = minOf(
+                    size.width / gameViewModel.boardWidth,
+                    size.height / gameViewModel.boardHeight
+                )
+                val boardPadding = 2.dp.toPx()
+
+                drawBoardBackground(
+                    gameState.board,
+                    squareSize,
+                    boardPadding,
+                    gameState.clearingLines
+                )
+
+                gameState.nextPiece?.let {
+                    val startX = gameViewModel.boardWidth / 2 - it.shape[0].size / 2
+                    drawPiece(it, startX, 0, squareSize, boardPadding, alpha = 0.3f)
+                }
+
+                gameState.piece?.let {
+                    drawPiece(it, gameState.pieceX, gameState.pieceY, squareSize, boardPadding)
+                }
             }
         }
     }
 }
 
-private fun DrawScope.drawBoardBackground(board: Array<IntArray>, squareSize: Float, padding: Float, clearingLines: List<Int>) {
+private fun DrawScope.drawBoardBackground(
+    board: Array<IntArray>,
+    squareSize: Float,
+    padding: Float,
+    clearingLines: List<Int>
+) {
     board.forEachIndexed { y, row ->
         val alpha = if (clearingLines.contains(y)) 0.5f else 1f
         row.forEachIndexed { x, color ->
@@ -105,13 +128,23 @@ private fun DrawScope.drawBoardBackground(board: Array<IntArray>, squareSize: Fl
     }
 }
 
-private fun DrawScope.drawPiece(piece: GameViewModel.Piece, x: Int, y: Int, squareSize: Float, padding: Float, alpha: Float = 1f) {
+private fun DrawScope.drawPiece(
+    piece: GameViewModel.Piece,
+    x: Int,
+    y: Int,
+    squareSize: Float,
+    padding: Float,
+    alpha: Float = 1f
+) {
     piece.shape.forEachIndexed { row_idx, row ->
         row.forEachIndexed { col_idx, value ->
             if (value != 0) {
                 drawRect(
                     color = colorFor(piece.color).copy(alpha = alpha),
-                    topLeft = Offset((x + col_idx) * squareSize + padding, (y + row_idx) * squareSize + padding),
+                    topLeft = Offset(
+                        (x + col_idx) * squareSize + padding,
+                        (y + row_idx) * squareSize + padding
+                    ),
                     size = Size(squareSize - 2 * padding, squareSize - 2 * padding)
                 )
             }

@@ -18,11 +18,8 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     val boardWidth = 10
     val boardHeight = 20
 
-    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, null, 0, 0, emptyList()))
+    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, null, 0, 0, emptyList(), 0))
     val gameState: StateFlow<GameState> = _gameState
-
-    private var _currentScore = MutableStateFlow(0)
-    val currentScore: StateFlow<Int> = _currentScore
 
     private var _highScore = MutableStateFlow(0)
     val highScore: StateFlow<Int> = _highScore
@@ -32,11 +29,69 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     init {
         viewModelScope.launch {
             _highScore.value = preferenceDataStore.highScore.first()
+            preferenceDataStore.gameState.first()?.let {
+                _gameState.value = it
+            }
         }
     }
 
-    data class GameState(val board: Array<IntArray>, val piece: Piece?, val nextPiece: Piece?, val pieceX: Int, val pieceY: Int, val clearingLines: List<Int>)
-    data class Piece(val shape: Array<IntArray>, val color: Int)
+    data class GameState(
+        val board: Array<IntArray>,
+        val piece: Piece?,
+        val nextPiece: Piece?,
+        val pieceX: Int,
+        val pieceY: Int,
+        val clearingLines: List<Int>,
+        val currentScore: Int
+    ) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as GameState
+
+            if (!board.contentDeepEquals(other.board)) return false
+            if (piece != other.piece) return false
+            if (nextPiece != other.nextPiece) return false
+            if (pieceX != other.pieceX) return false
+            if (pieceY != other.pieceY) return false
+            if (clearingLines != other.clearingLines) return false
+            if (currentScore != other.currentScore) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = board.contentDeepHashCode()
+            result = 31 * result + (piece?.hashCode() ?: 0)
+            result = 31 * result + (nextPiece?.hashCode() ?: 0)
+            result = 31 * result + pieceX
+            result = 31 * result + pieceY
+            result = 31 * result + clearingLines.hashCode()
+            result = 31 * result + currentScore
+            return result
+        }
+    }
+
+    data class Piece(val shape: Array<IntArray>, val color: Int) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Piece
+
+            if (!shape.contentDeepEquals(other.shape)) return false
+            if (color != other.color) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = shape.contentDeepHashCode()
+            result = 31 * result + color
+            return result
+        }
+    }
 
     private val pieces = listOf(
         Piece(arrayOf(intArrayOf(1, 1, 1, 1)), 1), // I
@@ -48,55 +103,89 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         Piece(arrayOf(intArrayOf(1, 1, 0), intArrayOf(0, 1, 1)), 7)  // Z
     )
 
-    fun startGame() {
-        if (gameJob == null || gameJob?.isActive == false) {
-            Log.d(TAG, "Starting new game...")
-            _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), 0, 0, emptyList())
-            _currentScore.value = 0 // Reset score
-            gameJob = viewModelScope.launch {
+    fun newGame() {
+        gameJob?.cancel()
+        gameJob = null
+        Log.d(TAG, "Starting new game...")
+        _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), 0, 0, emptyList(), 0)
+        viewModelScope.launch { preferenceDataStore.clearGameState() }
+        runGame()
+    }
+
+    fun pauseGame() {
+        gameJob?.cancel()
+        gameJob = null
+        if (_gameState.value.piece != null) {
+            viewModelScope.launch {
+                preferenceDataStore.saveGameState(_gameState.value)
+            }
+        }
+        Log.d(TAG, "Game paused.")
+    }
+
+    fun continueGame() {
+        if (gameJob?.isActive != true && _gameState.value.piece != null) {
+            Log.d(TAG, "Continuing game...")
+            runGame()
+        }
+    }
+
+    private fun runGame() {
+        if (gameJob?.isActive == true) return
+        gameJob = viewModelScope.launch {
+            if (_gameState.value.piece == null) {
                 spawnNewPiece()
-                while (true) {
-                    delay(500)
-                    if (!movePiece(0, 1)) {
-                        Log.d(TAG, "Piece could not move down. Locking piece.")
-                        lockPiece()
-                        val linesCleared = clearLines()
-                        updateScore(linesCleared)
-                        if (linesCleared > 0) {
-                            delay(300)
-                            _gameState.value = _gameState.value.copy(clearingLines = emptyList())
-                        }
-                        if (!spawnNewPiece()) {
-                            Log.d(TAG, "Game Over. Resetting.")
-                            if (_currentScore.value > _highScore.value) {
-                                _highScore.value = _currentScore.value
-                                viewModelScope.launch {
-                                    preferenceDataStore.updateHighScore(_currentScore.value)
-                                }
-                            }
-                            gameJob?.cancel()
-                            gameJob = null
-                            break
-                        }
+            }
+            while (true) {
+                delay(500)
+                if (!movePiece(0, 1)) {
+                    Log.d(TAG, "Piece could not move down. Locking piece.")
+                    lockPiece()
+                    val linesCleared = clearLines()
+                    updateScore(linesCleared)
+                    if (linesCleared > 0) {
+                        delay(300)
+                        _gameState.value = _gameState.value.copy(clearingLines = emptyList())
+                    }
+                    if (!spawnNewPiece()) {
+                        Log.d(TAG, "Game Over.")
+                        endGame()
+                        break
                     }
                 }
             }
         }
     }
 
+    private fun endGame() {
+        if (_gameState.value.currentScore > _highScore.value) {
+            _highScore.value = _gameState.value.currentScore
+            viewModelScope.launch {
+                preferenceDataStore.updateHighScore(_gameState.value.currentScore)
+            }
+        }
+        gameJob?.cancel()
+        gameJob = null
+        viewModelScope.launch { preferenceDataStore.clearGameState() }
+    }
+
     fun moveLeft() {
+        if (gameJob?.isActive != true) return
         movePiece(-1, 0)
     }
 
     fun moveRight() {
+        if (gameJob?.isActive != true) return
         movePiece(1, 0)
     }
 
     fun moveDown() {
+        if (gameJob?.isActive != true) return
         movePiece(0, 1)
     }
 
     fun rotate() {
+        if (gameJob?.isActive != true) return
         val currentPiece = _gameState.value.piece ?: return
         val rotatedShape = Array(currentPiece.shape[0].size) { IntArray(currentPiece.shape.size) }
         for (y in currentPiece.shape.indices) {
@@ -179,7 +268,8 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                 4 -> 1000
                 else -> 0
             }
-            _currentScore.value += points
+            val newScore = _gameState.value.currentScore + points
+            _gameState.value = _gameState.value.copy(currentScore = newScore)
         }
     }
 

@@ -17,8 +17,6 @@
 package net.ljga.projects.games.tetris.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -29,13 +27,19 @@ import net.ljga.projects.games.tetris.ui.game.MenuScreen
 @Composable
 fun MainNavigation(gameViewModel: GameViewModel) {
     val navController = rememberNavController()
-    val highScore by gameViewModel.highScore.collectAsState()
 
     NavHost(navController = navController, startDestination = "menu") {
-        composable("menu") { 
+        composable("menu") {
             MenuScreen(
-                highScore = highScore,
-                onStartGame = { navController.navigate("game") }
+                gameViewModel = gameViewModel,
+                onContinue = {
+                    gameViewModel.continueGame()
+                    navController.navigate("game")
+                },
+                onNewGame = {
+                    gameViewModel.newGame()
+                    navController.navigate("game")
+                }
             )
         }
         composable("game") { GameScreen(gameViewModel) }
