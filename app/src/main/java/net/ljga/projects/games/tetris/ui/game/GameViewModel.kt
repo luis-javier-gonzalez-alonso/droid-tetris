@@ -155,7 +155,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         Artifact("Score Multiplier", "Multiplies score from line clears by 1.5x"),
         Artifact("Spring-loaded Rotator", "Rotating moves the piece up one space"),
         Artifact("Chaos Orb", "Rotating changes the piece type"),
-        Artifact("Gravity Inverter", "Pieces move up instead of down"),
+        Artifact("Piece Insurance", "If a piece is locked at the top of the board, it won't cause a game over"),
         Artifact("Repulsor", "Pieces are repelled from the walls"),
         Artifact("Selective Gravity", "Only affects 'I' pieces"),
         Artifact("Piece Swapper", "Swap the current piece with the next piece"),
@@ -251,8 +251,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                     delayMs = (delayMs * 0.7).toLong()
                 }
                 delay(delayMs)
-                val dy = if (_gameState.value.artifacts.any { it.name == "Gravity Inverter" }) -1 else 1
-                if (!movePiece(0, dy)) {
+                if (!movePiece(0, 1)) {
                     Log.d(TAG, "Piece could not move down. Locking piece.")
                     lockPiece()
                     val linesCleared = clearLines()
@@ -267,9 +266,13 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                         _gameState.value = _gameState.value.copy(clearingLines = emptyList())
                     }
                     if (!spawnNewPiece()) {
-                        Log.d(TAG, "Game Over.")
-                        endGame()
-                        break
+                        if (_gameState.value.artifacts.any { it.name == "Piece Insurance" }) {
+                            _gameState.value = _gameState.value.copy(artifacts = _gameState.value.artifacts.filter { it.name != "Piece Insurance" })
+                        } else {
+                            Log.d(TAG, "Game Over.")
+                            endGame()
+                            break
+                        }
                     }
                 }
             }
