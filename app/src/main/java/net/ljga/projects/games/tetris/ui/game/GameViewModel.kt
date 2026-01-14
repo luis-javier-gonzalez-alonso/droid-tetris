@@ -158,7 +158,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         Artifact("Score Multiplier", "Multiplies score from line clears by 1.5x"),
         Artifact("Spring-loaded Rotator", "Rotating moves the piece up one space"),
         Artifact("Chaos Orb", "Rotating changes the piece type"),
-        Artifact("Piece Insurance", "If a piece is locked at the top of the board, it won't cause a game over"),
+        Artifact("Falling Fragments", "When completing 2 or 4 lines, 2 single-square pieces drop from the top in random positions."),
         Artifact("Repulsor", "Pieces are repelled from the walls"),
         Artifact("Selective Gravity", "Only affects 'I' pieces"),
         Artifact("Piece Swapper", "Swap the current piece with the next piece"),
@@ -275,12 +275,8 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                             _gameState.value = _gameState.value.copy(clearingLines = emptyList())
                         }
                         if (!spawnNewPiece()) {
-                            if (_gameState.value.artifacts.any { it.name == "Piece Insurance" }) {
-                                _gameState.value = _gameState.value.copy(artifacts = _gameState.value.artifacts.filter { it.name != "Piece Insurance" })
-                            } else {
-                                Log.d(TAG, "Game Over.")
-                                endGame()
-                            }
+                            Log.d(TAG, "Game Over.")
+                            endGame()
                         }
                     }.join()
                 }
@@ -408,6 +404,10 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             }
         }
 
+        if (_gameState.value.artifacts.any { it.name == "Falling Fragments" } && (linesToClear.size == 2 || linesToClear.size == 4)) {
+            dropFragments()
+        }
+
         if (linesToClear.isNotEmpty()) {
             _gameState.value = _gameState.value.copy(clearingLines = linesToClear)
             delay(300)
@@ -418,6 +418,22 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             _gameState.value = _gameState.value.copy(board = newBoard.toTypedArray())
         }
         return linesToClear.size
+    }
+
+    private fun dropFragments() {
+        val newBoard = _gameState.value.board.map { it.clone() }.toTypedArray()
+        val random = Random()
+        repeat(2) {
+            val x = random.nextInt(boardWidth)
+            var y = 0
+            while (y + 1 < boardHeight && newBoard[y + 1][x] == 0) {
+                y++
+            }
+            if (y < boardHeight) {
+                newBoard[y][x] = 8 // Garbage block color
+            }
+        }
+        _gameState.value = _gameState.value.copy(board = newBoard)
     }
 
     private suspend fun updateScoreAndLevel(linesCleared: Int) {
