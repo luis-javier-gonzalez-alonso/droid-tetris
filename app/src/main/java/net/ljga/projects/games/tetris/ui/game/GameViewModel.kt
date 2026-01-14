@@ -140,7 +140,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     data class Boss(val name: String, var requiredLines: Int)
 
     val allMutations = listOf(
-        Mutation("Unyielding", "Start with one line of garbage blocks"),
+        Mutation("Unyielding", "Start with one line of garbage blocks, and a new one for each level"),
         Mutation("Feather Fall", "Pieces fall 20% slower"),
         Mutation("Clairvoyance", "See the next two pieces instead of one"),
         Mutation("Lead Fall", "Pieces fall 25% faster"),
@@ -201,17 +201,22 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     private fun applyStartingMutations() {
         val state = _gameState.value
         if (state.selectedMutations.any { it.name == "Unyielding" }) {
-            val newBoard = state.board.clone()
-            for (i in 0 until boardWidth) {
-                newBoard[boardHeight - 1][i] = 8 // Garbage block color
-            }
-            val random = Random()
-            val indicesToRemove = (0 until boardWidth).shuffled(random).take(3)
-            for (i in indicesToRemove) {
-                newBoard[boardHeight - 1][i] = 0
-            }
-            _gameState.value = state.copy(board = newBoard)
+            addGarbageLine()
         }
+    }
+
+    private fun addGarbageLine() {
+        val state = _gameState.value
+        val newBoard = state.board.clone()
+        for (i in 0 until boardWidth) {
+            newBoard[boardHeight - 1][i] = 8 // Garbage block color
+        }
+        val random = Random()
+        val indicesToRemove = (0 until boardWidth).shuffled(random).take(3)
+        for (i in indicesToRemove) {
+            newBoard[boardHeight - 1][i] = 0
+        }
+        _gameState.value = state.copy(board = newBoard)
     }
 
     fun pauseGame() {
@@ -448,6 +453,9 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             if (newLinesUntilNextLevel <= 0) {
                 newLevel++
                 newLinesUntilNextLevel += newLevel * 5
+                if (_gameState.value.selectedMutations.any { it.name == "Unyielding" }) {
+                    addGarbageLine()
+                }
                 if (allArtifacts.size > _gameState.value.artifacts.size) {
                     val availableArtifacts = allArtifacts.filterNot { _gameState.value.artifacts.contains(it) }
                     if (availableArtifacts.size >= 2) {
