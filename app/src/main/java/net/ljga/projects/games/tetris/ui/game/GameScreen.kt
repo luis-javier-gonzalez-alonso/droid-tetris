@@ -183,6 +183,9 @@ fun GameScreen(
                 }
 
                 gameState.piece?.let {
+                    if (gameState.selectedMutations.any { it.name == "Phantom Piece" }) {
+                        drawPiece(it, gameState.pieceX, gameState.ghostPieceY, squareSize, boardPadding, alpha = 0.2f)
+                    }
                     drawPiece(it, gameState.pieceX, gameState.pieceY, squareSize, boardPadding)
                 }
             }
@@ -221,8 +224,9 @@ private fun DrawScope.drawPiece(
     piece.shape.forEachIndexed { row_idx, row ->
         row.forEachIndexed { col_idx, value ->
             if (value != 0) {
+                val pieceColor = if (piece.color == 8) Color.DarkGray else colorFor(piece.color)
                 drawRect(
-                    color = colorFor(piece.color).copy(alpha = alpha),
+                    color = pieceColor.copy(alpha = alpha),
                     topLeft = Offset(
                         (x + col_idx) * squareSize + padding,
                         (y + row_idx) * squareSize + padding

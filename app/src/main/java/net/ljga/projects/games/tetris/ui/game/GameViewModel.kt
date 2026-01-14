@@ -19,7 +19,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     val boardWidth = 10
     val boardHeight = 20
 
-    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, null, null, 0, 0, emptyList(), 0, 1, 5, false, emptyList(), emptyList(), null))
+    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, null, null, 0, 0, emptyList(), 0, 1, 5, false, emptyList(), emptyList(), null, listOf(), 0))
     val gameState: StateFlow<GameState> = _gameState
 
     private var _highScore = MutableStateFlow(0)
@@ -55,7 +55,9 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         val isGameOver: Boolean,
         val artifacts: List<Artifact>,
         val selectedMutations: List<Mutation>,
-        val currentBoss: Boss?
+        val currentBoss: Boss?,
+        val pieceQueue: List<Piece>,
+        val ghostPieceY: Int
     ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -77,6 +79,8 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             if (artifacts != other.artifacts) return false
             if (selectedMutations != other.selectedMutations) return false
             if (currentBoss != other.currentBoss) return false
+            if (pieceQueue != other.pieceQueue) return false
+            if (ghostPieceY != other.ghostPieceY) return false
 
             return true
         }
@@ -96,6 +100,8 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             result = 31 * result + artifacts.hashCode()
             result = 31 * result + selectedMutations.hashCode()
             result = 31 * result + (currentBoss?.hashCode() ?: 0)
+            result = 31 * result + pieceQueue.hashCode()
+            result = 31 * result + ghostPieceY
             return result
         }
     }
@@ -129,7 +135,14 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     val allMutations = listOf(
         Mutation("Unyielding", "Start with one line of garbage blocks"),
         Mutation("Feather Fall", "Pieces fall 20% slower"),
-        Mutation("Clairvoyance", "See the next two pieces instead of one")
+        Mutation("Clairvoyance", "See the next two pieces instead of one"),
+        Mutation("Lead Fall", "Pieces fall 25% faster"),
+        Mutation("Colorblind", "All pieces are the same color"),
+        Mutation("More 'I's", "Increases the frequency of 'I' pieces"),
+        Mutation("Garbage Collector", "Spawning a piece has a chance to add a garbage block"),
+        Mutation("Time Warp", "Clearing a line has a 10% chance to freeze the game for 2 seconds"),
+        Mutation("Fair Play", "All 7 unique pieces will spawn before any are repeated"),
+        Mutation("Phantom Piece", "Shows a ghost of where the current piece will land")
     )
 
     private val allArtifacts = listOf(
@@ -163,7 +176,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
             val startingMutation = if (unlockedMutations.isNotEmpty()) listOf(unlockedMutations.random()) else emptyList()
 
-            _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, emptyList(), startingMutation, null)
+            _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, emptyList(), startingMutation, null, pieces.shuffled(), 0)
             applyStartingMutations()
 
             preferenceDataStore.clearGameState()
@@ -220,6 +233,9 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                 if (_gameState.value.selectedMutations.any { it.name == "Feather Fall" }) {
                     delayMs = (delayMs * 1.2).toLong()
                 }
+                if (_gameState.value.selectedMutations.any { it.name == "Lead Fall" }) {
+                    delayMs = (delayMs * 0.75).toLong()
+                }
                 if (_gameState.value.currentBoss?.name == "The Sprinter") {
                     delayMs = (delayMs * 0.7).toLong()
                 }
@@ -228,6 +244,11 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                     Log.d(TAG, "Piece could not move down. Locking piece.")
                     lockPiece()
                     val linesCleared = clearLines()
+                    if (linesCleared > 0 && _gameState.value.selectedMutations.any { it.name == "Time Warp" }) {
+                        if (Random().nextInt(10) == 0) {
+                            delay(2000)
+                        }
+                    }
                     updateScoreAndLevel(linesCleared)
                     if (linesCleared > 0) {
                         delay(300)
@@ -283,6 +304,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         val newPiece = Piece(rotatedShape, currentPiece.color)
         if (isValidPosition(_gameState.value.pieceX, _gameState.value.pieceY, newPiece)) {
             _gameState.value = _gameState.value.copy(piece = newPiece)
+            updateGhostPiece()
         }
     }
 
@@ -293,6 +315,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
         if (isValidPosition(newX, newY, currentPiece)) {
             _gameState.value = _gameState.value.copy(pieceX = newX, pieceY = newY)
+            updateGhostPiece()
             return true
         }
         return false
@@ -322,7 +345,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                     val boardX = _gameState.value.pieceX + px
                     val boardY = _gameState.value.pieceY + py
                     if (boardY >= 0 && boardY < boardHeight && boardX >= 0 && boardX < boardWidth) {
-                        newBoard[boardY][boardX] = currentPiece.color
+                        newBoard[boardY][boardX] = if (_gameState.value.selectedMutations.any { it.name == "Colorblind" }) 8 else currentPiece.color
                     }
                 }
             }
@@ -431,9 +454,38 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
     private fun spawnNewPiece(): Boolean {
         val state = _gameState.value
-        val pieceToSpawn = state.nextPiece ?: pieces.random()
-        val nextPiece = state.secondNextPiece ?: pieces.random()
-        val secondNextPiece = pieces.random()
+        var newPieceQueue = state.pieceQueue
+
+        val pieceToSpawn = if (state.selectedMutations.any { it.name == "Fair Play" }) {
+            if (newPieceQueue.isEmpty()) {
+                newPieceQueue = pieces.shuffled()
+            }
+            newPieceQueue.first()
+        } else if (state.selectedMutations.any { it.name == "More 'I's" } && Random().nextInt(5) == 0) {
+            pieces.first()
+        } else {
+            state.nextPiece ?: pieces.random()
+        }
+
+        newPieceQueue = if (newPieceQueue.isNotEmpty()) newPieceQueue.drop(1) else newPieceQueue
+
+        val nextPiece = if (state.selectedMutations.any { it.name == "Fair Play" }) {
+            if (newPieceQueue.isEmpty()) {
+                newPieceQueue = pieces.shuffled()
+            }
+            newPieceQueue.first()
+        } else {
+            state.secondNextPiece ?: pieces.random()
+        }
+
+        val secondNextPiece = if (state.selectedMutations.any { it.name == "Fair Play" }) {
+            if (newPieceQueue.size < 2) {
+                newPieceQueue = newPieceQueue + pieces.shuffled()
+            }
+            newPieceQueue[1]
+        } else {
+            pieces.random()
+        }
 
         val startX = boardWidth / 2 - pieceToSpawn.shape[0].size / 2
         val startY = 0
@@ -442,14 +494,34 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             return false // Game Over
         }
 
+        if (state.selectedMutations.any { it.name == "Garbage Collector" } && Random().nextInt(10) == 0) {
+            val newBoard = state.board.clone()
+            val randomX = Random().nextInt(boardWidth)
+            newBoard[boardHeight - 1][randomX] = 8 // Garbage block color
+            _gameState.value = state.copy(board = newBoard)
+        }
+
         _gameState.value = state.copy(
             piece = pieceToSpawn,
             nextPiece = nextPiece,
             secondNextPiece = secondNextPiece,
             pieceX = startX,
-            pieceY = startY
+            pieceY = startY,
+            pieceQueue = newPieceQueue
         )
+        updateGhostPiece()
         return true
+    }
+
+    private fun updateGhostPiece() {
+        val state = _gameState.value
+        if (state.selectedMutations.any { it.name == "Phantom Piece" }) {
+            var ghostY = state.pieceY
+            while (isValidPosition(state.pieceX, ghostY + 1, state.piece!!)) {
+                ghostY++
+            }
+            _gameState.value = state.copy(ghostPieceY = ghostY)
+        }
     }
 
     private fun createEmptyBoard(): Array<IntArray> = Array(boardHeight) { IntArray(boardWidth) }
