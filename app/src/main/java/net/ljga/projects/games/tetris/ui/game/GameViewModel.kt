@@ -19,7 +19,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     val boardWidth = 10
     val boardHeight = 20
 
-    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, null, null, 0, 0, emptyList(), 0, 1, 5, false, emptyList(), emptyList(), null, listOf(), 0))
+    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, null, null, 0, 0, emptyList(), 0, 1, 5, false, emptyList(), emptyList(), null, listOf(), 0, emptyList()))
     val gameState: StateFlow<GameState> = _gameState
 
     private var _highScore = MutableStateFlow(0)
@@ -61,7 +61,8 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         val selectedMutations: List<Mutation>,
         val currentBoss: Boss?,
         val pieceQueue: List<Piece>,
-        val ghostPieceY: Int
+        val ghostPieceY: Int,
+        val artifactChoices: List<Artifact>
     ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -85,6 +86,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             if (currentBoss != other.currentBoss) return false
             if (pieceQueue != other.pieceQueue) return false
             if (ghostPieceY != other.ghostPieceY) return false
+            if (artifactChoices != other.artifactChoices) return false
 
             return true
         }
@@ -106,6 +108,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             result = 31 * result + (currentBoss?.hashCode() ?: 0)
             result = 31 * result + pieceQueue.hashCode()
             result = 31 * result + ghostPieceY
+            result = 31 * result + artifactChoices.hashCode()
             return result
         }
     }
@@ -187,7 +190,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
             val startingMutation = if (unlockedMutations.isNotEmpty()) listOf(unlockedMutations.random()) else emptyList()
 
-            _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, emptyList(), startingMutation, null, pieces.shuffled(), 0)
+            _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, emptyList(), startingMutation, null, pieces.shuffled(), 0, emptyList())
             applyStartingMutations()
 
             preferenceDataStore.clearSavedGame()
@@ -223,7 +226,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     }
 
     fun continueGame() {
-        if (gameJob?.isActive != true && _gameState.value.piece != null) {
+        if (gameJob?.isActive != true) {
             Log.d(TAG, "Continuing game...")
             runGame()
         }
@@ -255,25 +258,26 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                     Log.d(TAG, "Piece could not move down. Locking piece.")
                     lockPiece()
                     val linesCleared = clearLines()
-                    if (linesCleared > 0 && _gameState.value.selectedMutations.any { it.name == "Time Warp" }) {
-                        if (Random().nextInt(10) == 0) {
-                            delay(2000)
+                    viewModelScope.launch {
+                        if (linesCleared > 0 && _gameState.value.selectedMutations.any { it.name == "Time Warp" }) {
+                            if (Random().nextInt(10) == 0) {
+                                delay(2000)
+                            }
                         }
-                    }
-                    updateScoreAndLevel(linesCleared)
-                    if (linesCleared > 0) {
-                        delay(300)
-                        _gameState.value = _gameState.value.copy(clearingLines = emptyList())
-                    }
-                    if (!spawnNewPiece()) {
-                        if (_gameState.value.artifacts.any { it.name == "Piece Insurance" }) {
-                            _gameState.value = _gameState.value.copy(artifacts = _gameState.value.artifacts.filter { it.name != "Piece Insurance" })
-                        } else {
-                            Log.d(TAG, "Game Over.")
-                            endGame()
-                            break
+                        updateScoreAndLevel(linesCleared)
+                        if (linesCleared > 0) {
+                            delay(300)
+                            _gameState.value = _gameState.value.copy(clearingLines = emptyList())
                         }
-                    }
+                        if (!spawnNewPiece()) {
+                            if (_gameState.value.artifacts.any { it.name == "Piece Insurance" }) {
+                                _gameState.value = _gameState.value.copy(artifacts = _gameState.value.artifacts.filter { it.name != "Piece Insurance" })
+                            } else {
+                                Log.d(TAG, "Game Over.")
+                                endGame()
+                            }
+                        }
+                    }.join()
                 }
             }
         }
@@ -440,13 +444,17 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
             var newLinesUntilNextLevel = _gameState.value.linesUntilNextLevel - linesCleared
             var newLevel = _gameState.value.level
-            var newArtifacts = _gameState.value.artifacts
+
             if (newLinesUntilNextLevel <= 0) {
                 newLevel++
                 newLinesUntilNextLevel += newLevel * 5
-                if (allArtifacts.size > newArtifacts.size) {
-                    val availableArtifacts = allArtifacts.filterNot { newArtifacts.contains(it) }
-                    newArtifacts = newArtifacts + availableArtifacts.random()
+                if (allArtifacts.size > _gameState.value.artifacts.size) {
+                    val availableArtifacts = allArtifacts.filterNot { _gameState.value.artifacts.contains(it) }
+                    if (availableArtifacts.size >= 2) {
+                        val choices = availableArtifacts.shuffled().take(2)
+                        _gameState.value = _gameState.value.copy(artifactChoices = choices)
+                        pauseGame()
+                    }
                 }
             }
 
@@ -458,9 +466,18 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                 currentScore = newScore,
                 level = newLevel,
                 linesUntilNextLevel = newLinesUntilNextLevel,
-                artifacts = newArtifacts,
                 currentBoss = currentBoss
             )
+        }
+    }
+
+    fun selectArtifact(artifact: Artifact) {
+        viewModelScope.launch {
+            _gameState.value = _gameState.value.copy(
+                artifacts = _gameState.value.artifacts + artifact,
+                artifactChoices = emptyList()
+            )
+            continueGame()
         }
     }
 

@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -22,6 +23,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun GameScreen(
@@ -29,6 +31,7 @@ fun GameScreen(
     onBack: () -> Unit = {}
 ) {
     val gameState by gameViewModel.gameState.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
 
     var accumulatedDragX by remember { mutableFloatStateOf(0f) }
     var accumulatedDragY by remember { mutableFloatStateOf(0f) }
@@ -57,6 +60,17 @@ fun GameScreen(
                 }
             }
         }
+    }
+
+    if (gameState.artifactChoices.isNotEmpty()) {
+        ArtifactSelectionDialog(
+            choices = gameState.artifactChoices,
+            onSelect = { artifact ->
+                coroutineScope.launch {
+                    gameViewModel.selectArtifact(artifact)
+                }
+            }
+        )
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -188,6 +202,41 @@ fun GameScreen(
                                     Text(mutation.description)
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ArtifactSelectionDialog(
+    choices: List<GameViewModel.Artifact>,
+    onSelect: (GameViewModel.Artifact) -> Unit
+) {
+    Dialog(onDismissRequest = { /* Do nothing, user must select an artifact */ }) {
+        Surface {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Choose an Artifact", style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
+                Spacer(modifier = Modifier.height(16.dp))
+                choices.forEach { artifact ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .pointerInput(artifact) {
+                                detectTapGestures {
+                                    onSelect(artifact)
+                                }
+                            }
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(artifact.name, style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+                            Text(artifact.description)
                         }
                     }
                 }
