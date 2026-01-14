@@ -159,7 +159,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         Artifact("Spring-loaded Rotator", "Rotating moves the piece up one space"),
         Artifact("Chaos Orb", "Rotating changes the piece type"),
         Artifact("Falling Fragments", "When completing 2 or 4 lines, 2 single-square pieces drop from the top in random positions."),
-        Artifact("Repulsor", "Pieces are repelled from the walls"),
+        Artifact("Board Wipe", "Single-use: Clearing 3 lines at the same time clears the entire board."),
         Artifact("Inverted Rotation", "Inverts the rotation direction of pieces"),
         Artifact("Piece Swapper", "Swap the current piece with the next piece"),
         Artifact("Board Shrinker", "Reduces the board width by 2 columns")
@@ -353,13 +353,8 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
     private fun movePiece(dx: Int, dy: Int): Boolean {
         val currentPiece = _gameState.value.piece ?: return false
-        var newX = _gameState.value.pieceX + dx
+        val newX = _gameState.value.pieceX + dx
         val newY = _gameState.value.pieceY + dy
-
-        if (_gameState.value.artifacts.any { it.name == "Repulsor" }) {
-            if (newX < 0) newX = 0
-            if (newX + currentPiece.shape[0].size > boardWidth) newX = boardWidth - currentPiece.shape[0].size
-        }
 
         if (isValidPosition(newX, newY, currentPiece)) {
             _gameState.value = _gameState.value.copy(pieceX = newX, pieceY = newY)
@@ -416,6 +411,11 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             dropFragments()
         }
 
+        if (_gameState.value.artifacts.any { it.name == "Board Wipe" } && linesToClear.size == 3) {
+            wipeBoard()
+            _gameState.value = _gameState.value.copy(artifacts = _gameState.value.artifacts.filter { it.name != "Board Wipe" })
+        }
+
         if (linesToClear.isNotEmpty()) {
             _gameState.value = _gameState.value.copy(clearingLines = linesToClear)
             delay(300)
@@ -426,6 +426,10 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             _gameState.value = _gameState.value.copy(board = newBoard.toTypedArray())
         }
         return linesToClear.size
+    }
+
+    private fun wipeBoard() {
+        _gameState.value = _gameState.value.copy(board = createEmptyBoard())
     }
 
     private fun dropFragments() {
