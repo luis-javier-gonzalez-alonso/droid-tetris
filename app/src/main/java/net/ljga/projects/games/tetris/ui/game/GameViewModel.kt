@@ -32,11 +32,12 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             _highScore.value = preferenceDataStore.highScore.first()
             val unlockedMutationNames = preferenceDataStore.unlockedMutations.first()
             val unlockedMutations = allMutations.filter { unlockedMutationNames.contains(it.name) }
+            val startingMutation = if (unlockedMutations.isNotEmpty()) listOf(unlockedMutations.random()) else emptyList()
 
             preferenceDataStore.gameState.first()?.let {
-                _gameState.value = it.copy(selectedMutations = unlockedMutations)
+                _gameState.value = it.copy(selectedMutations = startingMutation)
             } ?: run {
-                _gameState.value = _gameState.value.copy(selectedMutations = unlockedMutations)
+                _gameState.value = _gameState.value.copy(selectedMutations = startingMutation)
             }
         }
     }
@@ -179,7 +180,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, emptyList(), startingMutation, null, pieces.shuffled(), 0)
             applyStartingMutations()
 
-            preferenceDataStore.clearGameState()
+            preferenceDataStore.clearSavedGame()
             runGame()
         }
     }
@@ -274,7 +275,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         _gameState.value = _gameState.value.copy(isGameOver = true)
         gameJob?.cancel()
         gameJob = null
-        viewModelScope.launch { preferenceDataStore.clearGameState() }
+        viewModelScope.launch { preferenceDataStore.clearSavedGame() }
     }
 
     fun moveLeft() {

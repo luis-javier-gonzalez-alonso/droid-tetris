@@ -66,4 +66,10 @@ class PreferenceDataStore(private val context: Context) {
             it[unlockedMutationsKey] = currentMutations + mutationName
         }
     }
+
+    suspend fun clearSavedGame() {
+        context.dataStore.edit {
+            it.remove(gameStateKey)
+        }
+    }
 }
