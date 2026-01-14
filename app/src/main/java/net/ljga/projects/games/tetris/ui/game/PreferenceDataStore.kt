@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
@@ -18,6 +19,7 @@ class PreferenceDataStore(private val context: Context) {
     private val gson = Gson()
     private val highScoreKey = intPreferencesKey("high_score")
     private val gameStateKey = stringPreferencesKey("game_state")
+    private val unlockedMutationsKey = stringSetPreferencesKey("unlocked_mutations")
 
     val highScore: Flow<Int> = context.dataStore.data
         .map { preferences ->
@@ -32,6 +34,11 @@ class PreferenceDataStore(private val context: Context) {
             } else {
                 gson.fromJson(json, GameViewModel.GameState::class.java)
             }
+        }
+
+    val unlockedMutations: Flow<Set<String>> = context.dataStore.data
+        .map { preferences ->
+            preferences[unlockedMutationsKey] ?: emptySet()
         }
 
     suspend fun updateHighScore(score: Int) {
@@ -50,6 +57,13 @@ class PreferenceDataStore(private val context: Context) {
     suspend fun clearGameState() {
         context.dataStore.edit {
             it.remove(gameStateKey)
+        }
+    }
+
+    suspend fun unlockMutation(mutationName: String) {
+        context.dataStore.edit {
+            val currentMutations = it[unlockedMutationsKey] ?: emptySet()
+            it[unlockedMutationsKey] = currentMutations + mutationName
         }
     }
 }

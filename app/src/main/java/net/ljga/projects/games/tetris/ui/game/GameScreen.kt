@@ -63,6 +63,16 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
             Text("Lines: ${gameState.linesUntilNextLevel}")
         }
 
+        gameState.currentBoss?.let {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Boss: ${it.name}")
+                Text("Lines to clear: ${it.requiredLines}")
+            }
+        }
+
         if (gameState.artifacts.isNotEmpty()) {
             LazyRow(
                 modifier = Modifier
@@ -74,6 +84,23 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
                         Column(modifier = Modifier.padding(8.dp)) {
                             Text(artifact.name)
                             Text(artifact.description)
+                        }
+                    }
+                }
+            }
+        }
+
+        if (gameState.selectedMutations.isNotEmpty()) {
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                items(gameState.selectedMutations) { mutation ->
+                    Card(modifier = Modifier.padding(end = 8.dp)) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            Text(mutation.name)
+                            Text(mutation.description)
                         }
                     }
                 }
@@ -142,6 +169,13 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
                     drawPiece(it, startX, 0, squareSize, boardPadding, alpha = 0.3f)
                 }
 
+                if (gameState.selectedMutations.any { it.name == "Clairvoyance" }) {
+                    gameState.secondNextPiece?.let {
+                        val startX = gameViewModel.boardWidth / 2 - it.shape[0].size / 2
+                        drawPiece(it, startX, 4, squareSize, boardPadding, alpha = 0.15f)
+                    }
+                }
+
                 gameState.piece?.let {
                     drawPiece(it, gameState.pieceX, gameState.pieceY, squareSize, boardPadding)
                 }
@@ -204,6 +238,7 @@ private fun colorFor(value: Int): Color {
         5 -> Color.Green
         6 -> Color.Red
         7 -> Color.Green
+        8 -> Color.DarkGray
         else -> Color.Gray
     }
 }
