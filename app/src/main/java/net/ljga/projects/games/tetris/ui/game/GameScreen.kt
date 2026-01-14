@@ -79,40 +79,6 @@ fun GameScreen(
             }
         }
 
-        if (gameState.artifacts.isNotEmpty()) {
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                items(gameState.artifacts) { artifact ->
-                    Card(modifier = Modifier.padding(end = 8.dp)) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            Text(artifact.name)
-                            Text(artifact.description)
-                        }
-                    }
-                }
-            }
-        }
-
-        if (gameState.selectedMutations.isNotEmpty()) {
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                items(gameState.selectedMutations) { mutation ->
-                    Card(modifier = Modifier.padding(end = 8.dp)) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            Text(mutation.name)
-                            Text(mutation.description)
-                        }
-                    }
-                }
-            }
-        }
-
         Box(
             modifier = Modifier.fillMaxWidth().weight(1f),
             contentAlignment = Alignment.Center
@@ -187,6 +153,43 @@ fun GameScreen(
                         drawPiece(it, gameState.pieceX, gameState.ghostPieceY, squareSize, boardPadding, alpha = 0.2f)
                     }
                     drawPiece(it, gameState.pieceX, gameState.pieceY, squareSize, boardPadding)
+                }
+            }
+            Column(
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
+                if (gameState.artifacts.isNotEmpty()) {
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        items(gameState.artifacts) { artifact ->
+                            Card(modifier = Modifier.padding(end = 8.dp)) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    Text(artifact.name)
+                                    Text(artifact.description)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (gameState.selectedMutations.isNotEmpty()) {
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        items(gameState.selectedMutations) { mutation ->
+                            Card(modifier = Modifier.padding(end = 8.dp)) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    Text(mutation.name)
+                                    Text(mutation.description)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
