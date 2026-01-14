@@ -149,7 +149,14 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     private val allArtifacts = listOf(
         Artifact("Swiftness Charm", "Increases piece drop speed by 10%"),
         Artifact("Line Clearer", "Clears an extra line randomly"),
-        Artifact("Score Multiplier", "Multiplies score from line clears by 1.5x")
+        Artifact("Score Multiplier", "Multiplies score from line clears by 1.5x"),
+        Artifact("Spring-loaded Rotator", "Rotating moves the piece up one space"),
+        Artifact("Chaos Orb", "Rotating changes the piece type"),
+        Artifact("Gravity Inverter", "Pieces move up instead of down"),
+        Artifact("Repulsor", "Pieces are repelled from the walls"),
+        Artifact("Selective Gravity", "Only affects 'I' pieces"),
+        Artifact("Piece Swapper", "Swap the current piece with the next piece"),
+        Artifact("Board Shrinker", "Reduces the board width by 2 columns")
     )
 
     private val bosses = listOf(
@@ -241,7 +248,8 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                     delayMs = (delayMs * 0.7).toLong()
                 }
                 delay(delayMs)
-                if (!movePiece(0, 1)) {
+                val dy = if (_gameState.value.artifacts.any { it.name == "Gravity Inverter" }) -1 else 1
+                if (!movePiece(0, dy)) {
                     Log.d(TAG, "Piece could not move down. Locking piece.")
                     lockPiece()
                     val linesCleared = clearLines()
@@ -296,6 +304,16 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     fun rotate() {
         if (gameJob?.isActive != true) return
         val currentPiece = _gameState.value.piece ?: return
+
+        if (_gameState.value.artifacts.any { it.name == "Chaos Orb" }) {
+            val newPiece = pieces.random()
+            if (isValidPosition(_gameState.value.pieceX, _gameState.value.pieceY, newPiece)) {
+                _gameState.value = _gameState.value.copy(piece = newPiece)
+                updateGhostPiece()
+            }
+            return
+        }
+
         val rotatedShape = Array(currentPiece.shape[0].size) { IntArray(currentPiece.shape.size) }
         for (y in currentPiece.shape.indices) {
             for (x in currentPiece.shape[y].indices) {
@@ -303,16 +321,26 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             }
         }
         val newPiece = Piece(rotatedShape, currentPiece.color)
-        if (isValidPosition(_gameState.value.pieceX, _gameState.value.pieceY, newPiece)) {
-            _gameState.value = _gameState.value.copy(piece = newPiece)
+        var newY = _gameState.value.pieceY
+        if (_gameState.value.artifacts.any { it.name == "Spring-loaded Rotator" }) {
+            newY -= 1
+        }
+
+        if (isValidPosition(_gameState.value.pieceX, newY, newPiece)) {
+            _gameState.value = _gameState.value.copy(piece = newPiece, pieceY = newY)
             updateGhostPiece()
         }
     }
 
     private fun movePiece(dx: Int, dy: Int): Boolean {
         val currentPiece = _gameState.value.piece ?: return false
-        val newX = _gameState.value.pieceX + dx
+        var newX = _gameState.value.pieceX + dx
         val newY = _gameState.value.pieceY + dy
+
+        if (_gameState.value.artifacts.any { it.name == "Repulsor" }) {
+            if (newX < 0) newX = 0
+            if (newX + currentPiece.shape[0].size > boardWidth) newX = boardWidth - currentPiece.shape[0].size
+        }
 
         if (isValidPosition(newX, newY, currentPiece)) {
             _gameState.value = _gameState.value.copy(pieceX = newX, pieceY = newY)
@@ -454,10 +482,10 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     }
 
     private fun spawnNewPiece(): Boolean {
-        val state = _gameState.value
+        var state = _gameState.value
         var newPieceQueue = state.pieceQueue
 
-        val pieceToSpawn = if (state.selectedMutations.any { it.name == "Fair Play" }) {
+        var pieceToSpawn = if (state.selectedMutations.any { it.name == "Fair Play" }) {
             if (newPieceQueue.isEmpty()) {
                 newPieceQueue = pieces.shuffled()
             }
@@ -470,7 +498,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
         newPieceQueue = if (newPieceQueue.isNotEmpty()) newPieceQueue.drop(1) else newPieceQueue
 
-        val nextPiece = if (state.selectedMutations.any { it.name == "Fair Play" }) {
+        var nextPiece = if (state.selectedMutations.any { it.name == "Fair Play" }) {
             if (newPieceQueue.isEmpty()) {
                 newPieceQueue = pieces.shuffled()
             }
@@ -488,7 +516,17 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             pieces.random()
         }
 
-        val startX = boardWidth / 2 - pieceToSpawn.shape[0].size / 2
+        if (_gameState.value.artifacts.any { it.name == "Piece Swapper" }) {
+            val temp = pieceToSpawn
+            pieceToSpawn = nextPiece
+            nextPiece = temp
+        }
+
+        val startX = if (_gameState.value.artifacts.any { it.name == "Board Shrinker" }) {
+            (boardWidth - 2) / 2 - pieceToSpawn.shape[0].size / 2
+        } else {
+            boardWidth / 2 - pieceToSpawn.shape[0].size / 2
+        }
         val startY = 0
 
         if (!isValidPosition(startX, startY, pieceToSpawn)) {
@@ -499,7 +537,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             val newBoard = state.board.clone()
             val randomX = Random().nextInt(boardWidth)
             newBoard[boardHeight - 1][randomX] = 8 // Garbage block color
-            _gameState.value = state.copy(board = newBoard)
+            state = state.copy(board = newBoard)
         }
 
         _gameState.value = state.copy(
@@ -518,10 +556,12 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         val state = _gameState.value
         if (state.selectedMutations.any { it.name == "Phantom Piece" }) {
             var ghostY = state.pieceY
-            while (isValidPosition(state.pieceX, ghostY + 1, state.piece!!)) {
-                ghostY++
+            state.piece?.let {
+                while (isValidPosition(state.pieceX, ghostY + 1, it)) {
+                    ghostY++
+                }
+                _gameState.value = state.copy(ghostPieceY = ghostY)
             }
-            _gameState.value = state.copy(ghostPieceY = ghostY)
         }
     }
 
