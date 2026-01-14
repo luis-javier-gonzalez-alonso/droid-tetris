@@ -19,7 +19,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     val boardWidth = 10
     val boardHeight = 20
 
-    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, null, null, 0, 0, emptyList(), 0, 1, 5, false, emptyList(), emptyList(), null, listOf(), 0, emptyList()))
+    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, null, null, 0, 0, emptyList(), 0, 1, 5, false, emptyList(), emptyList(), null, listOf(), 0, emptyList(), 0))
     val gameState: StateFlow<GameState> = _gameState
 
     private var _highScore = MutableStateFlow(0)
@@ -62,7 +62,8 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         val currentBoss: Boss?,
         val pieceQueue: List<Piece>,
         val ghostPieceY: Int,
-        val artifactChoices: List<Artifact>
+        val artifactChoices: List<Artifact>,
+        var rotationCount: Int
     ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -87,6 +88,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             if (pieceQueue != other.pieceQueue) return false
             if (ghostPieceY != other.ghostPieceY) return false
             if (artifactChoices != other.artifactChoices) return false
+            if (rotationCount != other.rotationCount) return false
 
             return true
         }
@@ -109,6 +111,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             result = 31 * result + pieceQueue.hashCode()
             result = 31 * result + ghostPieceY
             result = 31 * result + artifactChoices.hashCode()
+            result = 31 * result + rotationCount
             return result
         }
     }
@@ -161,7 +164,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         Artifact("Falling Fragments", "When completing 2 or 4 lines, 2 single-square pieces drop from the top in random positions."),
         Artifact("Board Wipe", "Single-use: Clearing 3 lines at the same time clears the entire board."),
         Artifact("Inverted Rotation", "Inverts the rotation direction of pieces"),
-        Artifact("Piece Swapper", "Swap the current piece with the next piece"),
+        Artifact("Piece Swapper", "Swap the current piece with the next piece by rotating twice"),
         Artifact("Board Shrinker", "Reduces the board width by 2 columns")
     )
 
@@ -190,7 +193,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
             val startingMutation = if (unlockedMutations.isNotEmpty()) listOf(unlockedMutations.random()) else emptyList()
 
-            _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, emptyList(), startingMutation, null, pieces.shuffled(), 0, emptyList())
+            _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, emptyList(), startingMutation, null, pieces.shuffled(), 0, emptyList(), 0)
             applyStartingMutations()
 
             preferenceDataStore.clearSavedGame()
@@ -300,21 +303,32 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     fun moveLeft() {
         if (gameJob?.isActive != true) return
         movePiece(-1, 0)
+        _gameState.value = _gameState.value.copy(rotationCount = 0)
     }
 
     fun moveRight() {
         if (gameJob?.isActive != true) return
         movePiece(1, 0)
+        _gameState.value = _gameState.value.copy(rotationCount = 0)
     }
 
     fun moveDown() {
         if (gameJob?.isActive != true) return
         movePiece(0, 1)
+        _gameState.value = _gameState.value.copy(rotationCount = 0)
     }
 
     fun rotate() {
         if (gameJob?.isActive != true) return
         val currentPiece = _gameState.value.piece ?: return
+
+        _gameState.value.rotationCount++
+
+        if (_gameState.value.artifacts.any { it.name == "Piece Swapper" } && _gameState.value.rotationCount >= 2) {
+            swapPieces()
+            _gameState.value = _gameState.value.copy(rotationCount = 0)
+            return
+        }
 
         if (_gameState.value.artifacts.any { it.name == "Chaos Orb" }) {
             val newPiece = pieces.random()
@@ -349,6 +363,13 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             _gameState.value = _gameState.value.copy(piece = newPiece, pieceY = newY)
             updateGhostPiece()
         }
+    }
+
+    private fun swapPieces() {
+        val state = _gameState.value
+        val newCurrent = state.nextPiece
+        val newNext = state.piece
+        _gameState.value = state.copy(piece = newCurrent, nextPiece = newNext)
     }
 
     private fun movePiece(dx: Int, dy: Int): Boolean {
@@ -393,7 +414,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                 }
             }
         }
-        _gameState.value = _gameState.value.copy(board = newBoard, piece = null)
+        _gameState.value = _gameState.value.copy(board = newBoard, piece = null, rotationCount = 0)
     }
 
     private suspend fun clearLines(): Int {
@@ -559,7 +580,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
         newPieceQueue = if (newPieceQueue.isNotEmpty()) newPieceQueue.drop(1) else newPieceQueue
 
-        var nextPiece = if (state.selectedMutations.any { it.name == "Fair Play" }) {
+        val nextPiece = if (state.selectedMutations.any { it.name == "Fair Play" }) {
             if (newPieceQueue.isEmpty()) {
                 newPieceQueue = pieces.shuffled()
             }
@@ -575,12 +596,6 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             newPieceQueue[1]
         } else {
             pieces.random()
-        }
-
-        if (_gameState.value.artifacts.any { it.name == "Piece Swapper" }) {
-            val temp = pieceToSpawn
-            pieceToSpawn = nextPiece
-            nextPiece = temp
         }
 
         val startX = if (_gameState.value.artifacts.any { it.name == "Board Shrinker" }) {
