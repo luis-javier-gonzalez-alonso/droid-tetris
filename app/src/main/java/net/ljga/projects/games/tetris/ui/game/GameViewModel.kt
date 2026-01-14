@@ -160,7 +160,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         Artifact("Chaos Orb", "Rotating changes the piece type"),
         Artifact("Falling Fragments", "When completing 2 or 4 lines, 2 single-square pieces drop from the top in random positions."),
         Artifact("Repulsor", "Pieces are repelled from the walls"),
-        Artifact("Selective Gravity", "Only affects 'I' pieces"),
+        Artifact("Inverted Rotation", "Inverts the rotation direction of pieces"),
         Artifact("Piece Swapper", "Swap the current piece with the next piece"),
         Artifact("Board Shrinker", "Reduces the board width by 2 columns")
     )
@@ -326,9 +326,17 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         }
 
         val rotatedShape = Array(currentPiece.shape[0].size) { IntArray(currentPiece.shape.size) }
-        for (y in currentPiece.shape.indices) {
-            for (x in currentPiece.shape[y].indices) {
-                rotatedShape[x][currentPiece.shape.size - 1 - y] = currentPiece.shape[y][x]
+        if (_gameState.value.artifacts.any { it.name == "Inverted Rotation" }) {
+            for (y in currentPiece.shape.indices) {
+                for (x in currentPiece.shape[y].indices) {
+                    rotatedShape[rotatedShape.size - 1 - x][y] = currentPiece.shape[y][x]
+                }
+            }
+        } else {
+            for (y in currentPiece.shape.indices) {
+                for (x in currentPiece.shape[y].indices) {
+                    rotatedShape[x][currentPiece.shape.size - 1 - y] = currentPiece.shape[y][x]
+                }
             }
         }
         val newPiece = Piece(rotatedShape, currentPiece.color)
