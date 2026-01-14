@@ -18,7 +18,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     val boardWidth = 10
     val boardHeight = 20
 
-    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, null, 0, 0, emptyList(), 0))
+    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, null, 0, 0, emptyList(), 0, 1, 5, false, emptyList()))
     val gameState: StateFlow<GameState> = _gameState
 
     private var _highScore = MutableStateFlow(0)
@@ -42,7 +42,11 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         val pieceX: Int,
         val pieceY: Int,
         val clearingLines: List<Int>,
-        val currentScore: Int
+        val currentScore: Int,
+        val level: Int,
+        val linesUntilNextLevel: Int,
+        val isGameOver: Boolean,
+        val artifacts: List<Artifact>
     ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -57,6 +61,10 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             if (pieceY != other.pieceY) return false
             if (clearingLines != other.clearingLines) return false
             if (currentScore != other.currentScore) return false
+            if (level != other.level) return false
+            if (linesUntilNextLevel != other.linesUntilNextLevel) return false
+            if (isGameOver != other.isGameOver) return false
+            if (artifacts != other.artifacts) return false
 
             return true
         }
@@ -69,6 +77,10 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             result = 31 * result + pieceY
             result = 31 * result + clearingLines.hashCode()
             result = 31 * result + currentScore
+            result = 31 * result + level
+            result = 31 * result + linesUntilNextLevel
+            result = 31 * result + isGameOver.hashCode()
+            result = 31 * result + artifacts.hashCode()
             return result
         }
     }
@@ -93,6 +105,14 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         }
     }
 
+    data class Artifact(val name: String, val description: String)
+
+    private val allArtifacts = listOf(
+        Artifact("Swiftness Charm", "Increases piece drop speed by 10%"),
+        Artifact("Line Clearer", "Clears an extra line randomly"),
+        Artifact("Score Multiplier", "Multiplies score from line clears by 1.5x")
+    )
+
     private val pieces = listOf(
         Piece(arrayOf(intArrayOf(1, 1, 1, 1)), 1), // I
         Piece(arrayOf(intArrayOf(1, 1), intArrayOf(1, 1)), 2), // O
@@ -107,7 +127,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         gameJob?.cancel()
         gameJob = null
         Log.d(TAG, "Starting new game...")
-        _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), 0, 0, emptyList(), 0)
+        _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, emptyList())
         viewModelScope.launch { preferenceDataStore.clearGameState() }
         runGame()
     }
@@ -137,12 +157,17 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                 spawnNewPiece()
             }
             while (true) {
-                delay(500)
+                val currentLevel = _gameState.value.level
+                var delayMs = (500 - (currentLevel - 1) * 50).coerceAtLeast(100).toLong()
+                if (_gameState.value.artifacts.any { it.name == "Swiftness Charm" }) {
+                    delayMs = (delayMs * 0.9).toLong()
+                }
+                delay(delayMs)
                 if (!movePiece(0, 1)) {
                     Log.d(TAG, "Piece could not move down. Locking piece.")
                     lockPiece()
                     val linesCleared = clearLines()
-                    updateScore(linesCleared)
+                    updateScoreAndLevel(linesCleared)
                     if (linesCleared > 0) {
                         delay(300)
                         _gameState.value = _gameState.value.copy(clearingLines = emptyList())
@@ -164,6 +189,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                 preferenceDataStore.updateHighScore(_gameState.value.currentScore)
             }
         }
+        _gameState.value = _gameState.value.copy(isGameOver = true)
         gameJob?.cancel()
         gameJob = null
         viewModelScope.launch { preferenceDataStore.clearGameState() }
@@ -245,31 +271,61 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
     private suspend fun clearLines(): Int {
         val board = _gameState.value.board
-        val linesToClear = board.indices.filter { y -> board[y].all { it != 0 } }
+        var linesToClear = board.indices.filter { y -> board[y].all { it != 0 } }
+
+        if (_gameState.value.artifacts.any { it.name == "Line Clearer" } && linesToClear.isNotEmpty()) {
+            val randomLine = (0 until boardHeight).random()
+            if (!linesToClear.contains(randomLine)) {
+                linesToClear = linesToClear + randomLine
+            }
+        }
 
         if (linesToClear.isNotEmpty()) {
             _gameState.value = _gameState.value.copy(clearingLines = linesToClear)
             delay(300)
 
             val newBoard = board.toMutableList()
-            linesToClear.reversed().forEach { newBoard.removeAt(it) }
+            linesToClear.sorted().reversed().forEach { newBoard.removeAt(it) }
             repeat(linesToClear.size) { newBoard.add(0, IntArray(boardWidth)) }
             _gameState.value = _gameState.value.copy(board = newBoard.toTypedArray())
         }
         return linesToClear.size
     }
 
-    private fun updateScore(linesCleared: Int) {
+    private fun updateScoreAndLevel(linesCleared: Int) {
         if (linesCleared > 0) {
-            val points = when (linesCleared) {
+            var points = when (linesCleared) {
                 1 -> 100
                 2 -> 300
                 3 -> 600
                 4 -> 1000
                 else -> 0
+            } * _gameState.value.level
+
+            if (_gameState.value.artifacts.any { it.name == "Score Multiplier" }) {
+                points = (points * 1.5).toInt()
             }
+
             val newScore = _gameState.value.currentScore + points
-            _gameState.value = _gameState.value.copy(currentScore = newScore)
+
+            var newLinesUntilNextLevel = _gameState.value.linesUntilNextLevel - linesCleared
+            var newLevel = _gameState.value.level
+            var newArtifacts = _gameState.value.artifacts
+            if (newLinesUntilNextLevel <= 0) {
+                newLevel++
+                newLinesUntilNextLevel += newLevel * 5
+                if (allArtifacts.size > newArtifacts.size) {
+                    val availableArtifacts = allArtifacts.filterNot { newArtifacts.contains(it) }
+                    newArtifacts = newArtifacts + availableArtifacts.random()
+                }
+            }
+
+            _gameState.value = _gameState.value.copy(
+                currentScore = newScore,
+                level = newLevel,
+                linesUntilNextLevel = newLinesUntilNextLevel,
+                artifacts = newArtifacts
+            )
         }
     }
 
