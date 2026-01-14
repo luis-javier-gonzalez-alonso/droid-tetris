@@ -16,7 +16,6 @@
 
 package net.ljga.projects.games.tetris.ui
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,12 +50,9 @@ fun MainNavigation(gameViewModel: GameViewModel) {
             )
         }
         composable("game") {
-            BackHandler(enabled = gameState.isGameOver) {
-                navController.navigate("menu") {
-                    popUpTo("menu") { inclusive = true }
-                }
+            GameScreen(gameViewModel) {
+                navController.popBackStack()
             }
-            GameScreen(gameViewModel)
         }
         composable("mutations") {
             MutationsScreen(

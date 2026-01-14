@@ -24,7 +24,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
-fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
+fun GameScreen(
+    gameViewModel: GameViewModel = viewModel(),
+    onBack: () -> Unit = {}
+) {
     val gameState by gameViewModel.gameState.collectAsState()
 
     var accumulatedDragX by remember { mutableFloatStateOf(0f) }
@@ -37,7 +40,7 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
     }
 
     if (gameState.isGameOver) {
-        Dialog(onDismissRequest = { /* Game over is a terminal state */ }) {
+        Dialog(onDismissRequest = onBack) {
             Surface {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -45,7 +48,10 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
                 ) {
                     Text("Game Over", modifier = Modifier.padding(bottom = 8.dp))
                     Text("Your score: ${gameState.currentScore}")
-                    Button(onClick = { gameViewModel.newGame() }) {
+                    Button(onClick = {
+                        gameViewModel.newGame()
+                        onBack()
+                    }) {
                         Text("New Game")
                     }
                 }
