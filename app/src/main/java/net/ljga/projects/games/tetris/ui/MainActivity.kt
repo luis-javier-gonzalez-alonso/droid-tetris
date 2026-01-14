@@ -19,6 +19,7 @@ package net.ljga.projects.games.tetris.ui
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -32,10 +33,15 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
+import net.ljga.projects.games.tetris.ui.game.GameViewModel
+import net.ljga.projects.games.tetris.ui.game.GameViewModelFactory
+import net.ljga.projects.games.tetris.ui.game.PreferenceDataStore
 import net.ljga.projects.games.tetris.ui.theme.MyApplicationTheme
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private val gameViewModel: GameViewModel by viewModels { GameViewModelFactory(PreferenceDataStore(this)) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,7 +62,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize().padding(top = 48.dp), // Added padding
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainNavigation()
+                    MainNavigation(gameViewModel)
                 }
             }
         }

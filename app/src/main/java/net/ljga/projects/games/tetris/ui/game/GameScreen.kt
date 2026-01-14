@@ -21,7 +21,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
     val gameState by gameViewModel.gameState.collectAsState()
     val currentScore by gameViewModel.currentScore.collectAsState()
-    val highScore by gameViewModel.highScore.collectAsState()
 
     var accumulatedDragX by remember { mutableStateOf(0f) }
     var accumulatedDragY by remember { mutableStateOf(0f) }
@@ -33,7 +32,6 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
     Column(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
             Text("Score: $currentScore")
-            Text("High Score: $highScore")
         }
 
         Canvas(

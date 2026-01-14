@@ -1,17 +1,19 @@
 package net.ljga.projects.games.tetris.ui.game
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import android.util.Log
 
 private const val TAG = "GameViewModel"
 
-class GameViewModel : ViewModel() {
+class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : ViewModel() {
 
     val boardWidth = 10
     val boardHeight = 20
@@ -26,6 +28,12 @@ class GameViewModel : ViewModel() {
     val highScore: StateFlow<Int> = _highScore
 
     private var gameJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            _highScore.value = preferenceDataStore.highScore.first()
+        }
+    }
 
     data class GameState(val board: Array<IntArray>, val piece: Piece?, val nextPiece: Piece?, val pieceX: Int, val pieceY: Int, val clearingLines: List<Int>)
     data class Piece(val shape: Array<IntArray>, val color: Int)
@@ -62,6 +70,9 @@ class GameViewModel : ViewModel() {
                             Log.d(TAG, "Game Over. Resetting.")
                             if (_currentScore.value > _highScore.value) {
                                 _highScore.value = _currentScore.value
+                                viewModelScope.launch {
+                                    preferenceDataStore.updateHighScore(_currentScore.value)
+                                }
                             }
                             gameJob?.cancel()
                             gameJob = null
@@ -191,4 +202,14 @@ class GameViewModel : ViewModel() {
     }
 
     private fun createEmptyBoard(): Array<IntArray> = Array(boardHeight) { IntArray(boardWidth) }
+}
+
+class GameViewModelFactory(private val preferenceDataStore: PreferenceDataStore) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(GameViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return GameViewModel(preferenceDataStore) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
 }
