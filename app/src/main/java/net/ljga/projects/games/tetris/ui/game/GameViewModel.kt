@@ -28,6 +28,9 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     private var _mutations = MutableStateFlow<List<Mutation>>(emptyList())
     val mutations: StateFlow<List<Mutation>> = _mutations
 
+    var debugMutations: List<Mutation> = emptyList()
+    var debugArtifacts: List<Artifact> = emptyList()
+
     private var gameJob: Job? = null
 
     init {
@@ -155,7 +158,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         Mutation("Phantom Piece", "Shows a ghost of where the current piece will land")
     )
 
-    private val allArtifacts = listOf(
+    val allArtifacts = listOf(
         Artifact("Swiftness Charm", "Increases piece drop speed by 10%"),
         Artifact("Line Clearer", "Clears an extra line randomly"),
         Artifact("Score Multiplier", "Multiplies score from line clears by 1.5x"),
@@ -184,16 +187,21 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     )
 
     fun newGame() {
+        newGame(emptyList(), emptyList())
+    }
+
+    fun newGame(mutations: List<Mutation>, artifacts: List<Artifact>) {
         gameJob?.cancel()
         gameJob = null
         Log.d(TAG, "Starting new game...")
         viewModelScope.launch {
-            val unlockedMutationNames = preferenceDataStore.unlockedMutations.first()
-            val unlockedMutations = allMutations.filter { unlockedMutationNames.contains(it.name) }
+            val startingMutations = if (mutations.isNotEmpty()) mutations else {
+                val unlockedMutationNames = preferenceDataStore.unlockedMutations.first()
+                val unlockedMutations = allMutations.filter { unlockedMutationNames.contains(it.name) }
+                if (unlockedMutations.isNotEmpty()) listOf(unlockedMutations.random()) else emptyList()
+            }
 
-            val startingMutation = if (unlockedMutations.isNotEmpty()) listOf(unlockedMutations.random()) else emptyList()
-
-            _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, emptyList(), startingMutation, null, pieces.shuffled(), 0, emptyList(), 0)
+            _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, artifacts, startingMutations, null, pieces.shuffled(), 0, emptyList(), 0)
             applyStartingMutations()
 
             preferenceDataStore.clearSavedGame()

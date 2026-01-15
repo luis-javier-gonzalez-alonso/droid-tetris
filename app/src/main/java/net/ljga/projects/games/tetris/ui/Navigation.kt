@@ -17,8 +17,6 @@
 package net.ljga.projects.games.tetris.ui
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -41,6 +39,10 @@ fun MainNavigation(gameViewModel: GameViewModel) {
                 },
                 onNewGame = {
                     gameViewModel.newGame()
+                    navController.navigate("game")
+                },
+                onNewDebugGame = { mutations, artifacts ->
+                    gameViewModel.newGame(mutations, artifacts)
                     navController.navigate("game")
                 },
                 onMutations = {
