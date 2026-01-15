@@ -145,17 +145,13 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         }
     }
 
-    data class Artifact(val name: String, val description: String)
-
-    data class Mutation(val name: String, val description: String)
-
     data class Boss(val name: String, var requiredLines: Int)
 
     val allMutations = listOf(
-        Mutation("Unyielding", "Start with one line of garbage blocks, and a new one for each level"),
-        Mutation("Feather Fall", "Pieces fall 20% slower"),
+        UnyieldingMutation(),
+        FeatherFallMutation(),
         Mutation("Clairvoyance", "See the next two pieces instead of one"),
-        Mutation("Lead Fall", "Pieces fall 25% faster"),
+        LeadFallMutation(),
         Mutation("Colorblind", "All pieces are the same color"),
         Mutation("More 'I's", "Increases the frequency of 'I' pieces"),
         Mutation("Garbage Collector", "Spawning a piece has a chance to add a garbage block"),
@@ -217,30 +213,13 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     }
 
     private fun applyStartingMutations() {
-        val state = _gameState.value
-        if (state.selectedMutations.any { it.name == "Unyielding" }) {
-            addGarbageLine()
+        var state = _gameState.value
+        _gameState.value.selectedMutations.forEach { mutation ->
+            if (mutation is IOnNewGameHook) {
+                state = mutation.onNewGame(state)
+            }
         }
-    }
-
-    private fun addGarbageLine() {
-        val state = _gameState.value
-        val newBoard = state.board.map { it.clone() }.toTypedArray()
-        val random = Random()
-        val randomX = random.nextInt(boardWidth)
-        var targetY = boardHeight - 1
-
-        // Find the first empty space from the bottom in the random column
-        while (targetY >= 0 && newBoard[targetY][randomX] != 0) {
-            targetY--
-        }
-
-        // If an empty space is found, place the garbage block
-        if (targetY >= 0) {
-            newBoard[targetY][randomX] = 8 // Garbage block color
-        }
-
-        _gameState.value = state.copy(board = newBoard)
+        _gameState.value = state
     }
 
     fun pauseGame() {
@@ -270,15 +249,13 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             while (true) {
                 val currentLevel = _gameState.value.level
                 var delayMs = (500 - (currentLevel - 1) * 50).coerceAtLeast(100).toLong()
-                if (_gameState.value.artifacts.any { it.name == "Swiftness Charm" }) {
-                    delayMs = (delayMs * 0.9).toLong()
+
+                _gameState.value.selectedMutations.forEach { mutation ->
+                    if (mutation is ITickDelayModifier) {
+                        delayMs = mutation.modifyTickDelay(delayMs)
+                    }
                 }
-                if (_gameState.value.selectedMutations.any { it.name == "Feather Fall" }) {
-                    delayMs = (delayMs * 1.2).toLong()
-                }
-                if (_gameState.value.selectedMutations.any { it.name == "Lead Fall" }) {
-                    delayMs = (delayMs * 0.75).toLong()
-                }
+
                 if (_gameState.value.currentBoss?.name == "The Sprinter") {
                     delayMs = (delayMs * 0.7).toLong()
                 }
@@ -639,9 +616,13 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             if (newLinesUntilNextLevel <= 0 && !_gameState.value.isDebugMode) {
                 newLevel++
                 newLinesUntilNextLevel += newLevel * 5
-                if (_gameState.value.selectedMutations.any { it.name == "Unyielding" }) {
-                    addGarbageLine()
+                var state = _gameState.value
+                _gameState.value.selectedMutations.forEach { mutation ->
+                    if (mutation is IOnLevelUpHook) {
+                        state = mutation.onLevelUp(state)
+                    }
                 }
+                _gameState.value = state
                 if (allArtifacts.size > _gameState.value.artifacts.size) {
                     val availableArtifacts = allArtifacts.filterNot { _gameState.value.artifacts.contains(it) }
                     if (availableArtifacts.size >= 2) {
@@ -767,9 +748,14 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                 targetY--
             }
 
-            // If an empty space is found, place the garbage block
+            // If an empty space is found, place the garbage block and push existing blocks up
             if (targetY >= 0) {
-                newBoard[targetY][randomX] = 8 // Garbage block color
+                // Shift blocks above the targetY up by one position
+                for (y in targetY downTo 1) {
+                    newBoard[y][randomX] = newBoard[y - 1][randomX]
+                }
+                // Place the garbage block at the bottom of the column (where the empty space was)
+                newBoard[0][randomX] = 8 // Garbage block color
             }
             state = state.copy(board = newBoard)
         }
