@@ -443,6 +443,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                     val boardX = _gameState.value.pieceX + px
                     val boardY = _gameState.value.pieceY + py
                     if (boardY >= 0 && boardY < boardHeight && boardX >= 0 && boardX < boardWidth) {
+                        // Apply colorblind mutation if active
                         newBoard[boardY][boardX] = if (_gameState.value.selectedMutations.any { it.name == "Colorblind" }) 8 else currentPiece.color
                     }
                 }
@@ -565,7 +566,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
         val fragmentAnimationJob = viewModelScope.launch {
             var currentFragments = initialFragments.toMutableList()
-            for (i in 0 until boardHeight) { 
+            for (i in 0 until boardHeight) {
                 delay(50)
                 val nextFragments = mutableListOf<Pair<Int, Int>>()
                 var fragmentsLanded = false
@@ -584,11 +585,11 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                     val finalBoard = _gameState.value.board.map { it.clone() }.toTypedArray()
                     currentFragments.forEach { (x, y) ->
                         if (y >= 0 && y < boardHeight && x >= 0 && x < boardWidth) {
-                            finalBoard[y][x] = 8 
+                            finalBoard[y][x] = 8
                         }
                     }
                     _gameState.value = _gameState.value.copy(board = finalBoard, fallingFragments = emptyList())
-                    return@launch 
+                    return@launch
                 }
             }
         }
@@ -704,9 +705,14 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             state.nextPiece ?: pieces.random()
         }
 
+        // Apply colorblind mutation if active for the current piece
+        if (_gameState.value.selectedMutations.any { it.name == "Colorblind" }) {
+            pieceToSpawn = Piece(pieceToSpawn.shape, 8)
+        }
+
         newPieceQueue = if (newPieceQueue.isNotEmpty()) newPieceQueue.drop(1) else newPieceQueue
 
-        val nextPiece = if (state.selectedMutations.any { it.name == "Fair Play" }) {
+        var nextPiece = if (state.selectedMutations.any { it.name == "Fair Play" }) {
             if (newPieceQueue.isEmpty()) {
                 newPieceQueue = pieces.shuffled()
             }
@@ -715,13 +721,19 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             state.secondNextPiece ?: pieces.random()
         }
 
-        val secondNextPiece = if (state.selectedMutations.any { it.name == "Fair Play" }) {
+        var secondNextPiece = if (state.selectedMutations.any { it.name == "Fair Play" }) {
             if (newPieceQueue.size < 2) {
                 newPieceQueue = newPieceQueue + pieces.shuffled()
             }
             newPieceQueue[1]
         } else {
             pieces.random()
+        }
+
+        // Apply colorblind mutation if active for next and second next pieces
+        if (_gameState.value.selectedMutations.any { it.name == "Colorblind" }) {
+            nextPiece = Piece(nextPiece.shape, 8)
+            secondNextPiece = Piece(secondNextPiece.shape, 8)
         }
 
         val startX = if (_gameState.value.artifacts.any { it.name == "Board Shrinker" }) {
