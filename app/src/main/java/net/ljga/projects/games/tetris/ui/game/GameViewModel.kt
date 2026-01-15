@@ -459,6 +459,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         if (_gameState.value.artifacts.any { it.name == "Board Wipe" } && linesToClear.size == 3) {
             wipeBoard()
             _gameState.value = _gameState.value.copy(artifacts = _gameState.value.artifacts.filter { it.name != "Board Wipe" })
+            return linesToClear.size
         }
 
         if (linesToClear.isNotEmpty()) {
