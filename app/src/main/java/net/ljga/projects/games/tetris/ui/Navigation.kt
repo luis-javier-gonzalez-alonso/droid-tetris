@@ -32,9 +32,6 @@ fun MainNavigation(gameViewModel: GameViewModel) {
                     gameViewModel.newGame(mutations, artifacts)
                     navController.navigate("game")
                 },
-                onMutations = {
-                    navController.navigate("mutations")
-                },
                 onShop = {
                     navController.navigate("shop")
                 },

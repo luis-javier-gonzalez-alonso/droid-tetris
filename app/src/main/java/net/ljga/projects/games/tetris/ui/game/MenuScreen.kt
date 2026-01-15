@@ -34,7 +34,6 @@ fun MenuScreen(
     onContinue: () -> Unit,
     onNewGame: () -> Unit,
     onNewDebugGame: (List<Mutation>, List<Artifact>) -> Unit,
-    onMutations: () -> Unit,
     onShop: () -> Unit,
     onSettings: () -> Unit
 ) {
@@ -204,14 +203,10 @@ fun MenuScreen(
             }
             Spacer(modifier = Modifier.height(16.dp))
 
-            MenuButton(text = stringResource(R.string.mutations), onClick = onMutations, color = Color(0xFF9B59B6))
+            MenuButton(text = stringResource(R.string.shop), onClick = onShop, color = Color(0xFF9B59B6))
             Spacer(modifier = Modifier.height(16.dp))
 
-            MenuButton(text = stringResource(R.string.shop), onClick = onShop, color = Color(0xFFF1C40F))
-            Spacer(modifier = Modifier.height(16.dp))
-
-            MenuButton(text = stringResource(R.string.settings), onClick = onSettings, color = Color.Gray)
-            
+            MenuButton(text = stringResource(R.string.settings), onClick = onSettings, color = Color(0xFFF1C40F))
             Spacer(modifier = Modifier.height(32.dp))
             
             TextButton(onClick = { showDebugMenu = true }) {
