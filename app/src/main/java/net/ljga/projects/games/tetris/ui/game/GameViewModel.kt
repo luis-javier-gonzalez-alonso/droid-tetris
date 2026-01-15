@@ -432,7 +432,14 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
     private suspend fun clearLines(): Int {
         val board = _gameState.value.board
-        var linesToClear = board.indices.filter { y -> board[y].all { it != 0 } }
+        val isShrunk = _gameState.value.artifacts.any { it.name == "Board Shrinker" }
+        var linesToClear = board.indices.filter { y ->
+            if (isShrunk) {
+                (2 until boardWidth).all { x -> board[y][x] != 0 }
+            } else {
+                board[y].all { it != 0 }
+            }
+        }
 
         if (_gameState.value.artifacts.any { it.name == "Line Clearer" } && linesToClear.isNotEmpty()) {
             val randomLine = (0 until boardHeight).random()
