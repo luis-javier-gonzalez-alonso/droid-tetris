@@ -200,6 +200,24 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         BoardShrinkerArtifact()
     )
 
+    // Helper functions to reduce hook invocation duplication
+    private inline fun <reified T> GameState.applyHook(transform: (T, GameState) -> GameState): GameState {
+        var state = this
+        selectedMutations.filterIsInstance<T>().forEach { state = transform(it, state) }
+        artifacts.filterIsInstance<T>().forEach { state = transform(it, state) }
+        return state
+    }
+
+    private inline fun <reified T> GameState.applyModifier(
+        initial: Long,
+        transform: (T, Long) -> Long
+    ): Long {
+        var result = initial
+        selectedMutations.filterIsInstance<T>().forEach { result = transform(it, result) }
+        artifacts.filterIsInstance<T>().forEach { result = transform(it, result) }
+        return result
+    }
+
     private val bosses = listOf(
         Boss("The Wall", 10),
         Boss("The Sprinter", 15)
@@ -230,18 +248,9 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     }
 
     private fun applyStartingMutations() {
-        var state = _gameState.value
-        _gameState.value.selectedMutations.forEach { mutation ->
-            if (mutation is IOnNewGameHook) {
-                state = mutation.onNewGame(state)
-            }
+        _gameState.value = _gameState.value.applyHook<IOnNewGameHook> { hook, state -> 
+            hook.onNewGame(state) 
         }
-        _gameState.value.artifacts.forEach { artifact ->
-            if (artifact is IOnNewGameHook) {
-                state = artifact.onNewGame(state)
-            }
-        }
-        _gameState.value = state
     }
 
     fun pauseGame() {
@@ -271,17 +280,10 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             while (true) {
                 val currentLevel = _gameState.value.level
                 var delayMs = (500 - (currentLevel - 1) * 50).coerceAtLeast(100).toLong()
+                delayMs = _gameState.value.applyModifier<ITickDelayModifier>(delayMs) { mod, delay ->
+                    mod.modifyTickDelay(delay)
+                }
 
-                _gameState.value.selectedMutations.forEach { mutation ->
-                    if (mutation is ITickDelayModifier) {
-                        delayMs = mutation.modifyTickDelay(delayMs)
-                    }
-                }
-                _gameState.value.artifacts.forEach { artifact ->
-                    if (artifact is ITickDelayModifier) {
-                        delayMs = artifact.modifyTickDelay(delayMs)
-                    }
-                }
 
                 if (_gameState.value.currentBoss?.name == "The Sprinter") {
                     delayMs = (delayMs * 0.7).toLong()
@@ -304,6 +306,11 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                             }
                         }
                         _gameState.value = state
+
+                        // Animate falling fragments if any were added by artifacts
+                        if (_gameState.value.fallingFragments.isNotEmpty()) {
+                            animateFallingFragments()
+                        }
 
                         updateScoreAndLevel(linesCleared)
                         if (linesCleared > 0) {
@@ -654,6 +661,41 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     }
 
     private fun createEmptyBoard(): Array<IntArray> = Array(boardHeight) { IntArray(boardWidth) }
+
+    private suspend fun animateFallingFragments() {
+        val fragmentAnimationJob = viewModelScope.launch {
+            var currentFragments = _gameState.value.fallingFragments.toMutableList()
+            if (currentFragments.isEmpty()) return@launch
+
+            for (i in 0 until boardHeight) {
+                delay(50)
+                val nextFragments = mutableListOf<Pair<Int, Int>>()
+                var fragmentsLanded = false
+                currentFragments.forEach { (x, y) ->
+                    val nextY = y + 1
+                    if (nextY < boardHeight && _gameState.value.board[nextY][x] == 0) {
+                        nextFragments.add(Pair(x, nextY))
+                    } else {
+                        nextFragments.add(Pair(x, y))
+                        fragmentsLanded = true
+                    }
+                }
+                currentFragments = nextFragments.toMutableList()
+                _gameState.value = _gameState.value.copy(fallingFragments = currentFragments)
+                if (fragmentsLanded) {
+                    val finalBoard = _gameState.value.board.map { it.clone() }.toTypedArray()
+                    currentFragments.forEach { (x, y) ->
+                        if (y >= 0 && y < boardHeight && x >= 0 && x < boardWidth) {
+                            finalBoard[y][x] = 8 // Color for falling fragments
+                        }
+                    }
+                    _gameState.value = _gameState.value.copy(board = finalBoard, fallingFragments = emptyList())
+                    return@launch
+                }
+            }
+        }
+        fragmentAnimationJob.join()
+    }
 }
 
 class GameViewModelFactory(private val preferenceDataStore: PreferenceDataStore) : ViewModelProvider.Factory {
