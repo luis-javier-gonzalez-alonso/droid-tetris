@@ -19,7 +19,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     val boardWidth = 10
     val boardHeight = 20
 
-    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, null, null, 0, 0, emptyList(), 0, 1, 5, false, emptyList(), emptyList(), null, listOf(), 0, emptyList(), 0))
+    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, null, null, 0, 0, emptyList(), 0, 1, 5, false, emptyList(), emptyList(), null, listOf(), 0, emptyList(), 0, false))
     val gameState: StateFlow<GameState> = _gameState
 
     private var _highScore = MutableStateFlow(0)
@@ -66,7 +66,8 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         val pieceQueue: List<Piece>,
         val ghostPieceY: Int,
         val artifactChoices: List<Artifact>,
-        var rotationCount: Int
+        var rotationCount: Int,
+        val isDebugMode: Boolean
     ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -92,6 +93,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             if (ghostPieceY != other.ghostPieceY) return false
             if (artifactChoices != other.artifactChoices) return false
             if (rotationCount != other.rotationCount) return false
+            if (isDebugMode != other.isDebugMode) return false
 
             return true
         }
@@ -115,6 +117,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             result = 31 * result + ghostPieceY
             result = 31 * result + artifactChoices.hashCode()
             result = 31 * result + rotationCount
+            result = 31 * result + isDebugMode.hashCode()
             return result
         }
     }
@@ -195,13 +198,14 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         gameJob = null
         Log.d(TAG, "Starting new game...")
         viewModelScope.launch {
-            val startingMutations = if (mutations.isNotEmpty()) mutations else {
+            val isDebugMode = mutations.isNotEmpty() || artifacts.isNotEmpty()
+            val startingMutations = if (isDebugMode) mutations else {
                 val unlockedMutationNames = preferenceDataStore.unlockedMutations.first()
                 val unlockedMutations = allMutations.filter { unlockedMutationNames.contains(it.name) }
                 if (unlockedMutations.isNotEmpty()) listOf(unlockedMutations.random()) else emptyList()
             }
 
-            _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, artifacts, startingMutations, null, pieces.shuffled(), 0, emptyList(), 0)
+            _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, artifacts, startingMutations, null, pieces.shuffled(), 0, emptyList(), 0, isDebugMode)
             applyStartingMutations()
 
             preferenceDataStore.clearSavedGame()
@@ -506,7 +510,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             val newScore = _gameState.value.currentScore + points
 
             var currentBoss = _gameState.value.currentBoss
-            if (currentBoss != null) {
+            if (currentBoss != null && !_gameState.value.isDebugMode) {
                 currentBoss.requiredLines -= linesCleared
                 if (currentBoss.requiredLines <= 0) {
                     _gameState.value = _gameState.value.copy(currentScore = _gameState.value.currentScore + 5000 * _gameState.value.level)
@@ -519,7 +523,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             var newLinesUntilNextLevel = _gameState.value.linesUntilNextLevel - linesCleared
             var newLevel = _gameState.value.level
 
-            if (newLinesUntilNextLevel <= 0) {
+            if (newLinesUntilNextLevel <= 0 && !_gameState.value.isDebugMode) {
                 newLevel++
                 newLinesUntilNextLevel += newLevel * 5
                 if (_gameState.value.selectedMutations.any { it.name == "Unyielding" }) {
@@ -535,7 +539,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                 }
             }
 
-            if (newLevel % 3 == 0 && currentBoss == null && _gameState.value.level % 3 != 0) {
+            if (newLevel % 3 == 0 && currentBoss == null && !_gameState.value.isDebugMode) {
                 currentBoss = spawnBoss(newLevel)
             }
 
