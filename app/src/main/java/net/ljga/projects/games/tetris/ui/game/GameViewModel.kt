@@ -19,7 +19,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     val boardWidth = 10
     val boardHeight = 20
 
-    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, null, null, 0, 0, emptyList(), 0, 1, 5, false, emptyList(), emptyList(), null, listOf(), 0, emptyList(), 0, false))
+    private val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, null, null, 0, 0, emptyList(), 0, 1, 5, false, emptyList(), emptyList(), null, listOf(), 0, emptyList(), 0, false, emptyList()))
     val gameState: StateFlow<GameState> = _gameState
 
     private var _highScore = MutableStateFlow(0)
@@ -67,7 +67,8 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         val ghostPieceY: Int,
         val artifactChoices: List<Artifact>,
         var rotationCount: Int,
-        val isDebugMode: Boolean
+        val isDebugMode: Boolean,
+        val fallingFragments: List<Pair<Int, Int>>
     ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -94,6 +95,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             if (artifactChoices != other.artifactChoices) return false
             if (rotationCount != other.rotationCount) return false
             if (isDebugMode != other.isDebugMode) return false
+            if (fallingFragments != other.fallingFragments) return false
 
             return true
         }
@@ -118,6 +120,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             result = 31 * result + artifactChoices.hashCode()
             result = 31 * result + rotationCount
             result = 31 * result + isDebugMode.hashCode()
+            result = 31 * result + fallingFragments.hashCode()
             return result
         }
     }
@@ -205,7 +208,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                 if (unlockedMutations.isNotEmpty()) listOf(unlockedMutations.random()) else emptyList()
             }
 
-            _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, artifacts, startingMutations, null, pieces.shuffled(), 0, emptyList(), 0, isDebugMode)
+            _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, artifacts, startingMutations, null, pieces.shuffled(), 0, emptyList(), 0, isDebugMode, emptyList())
             applyStartingMutations()
 
             preferenceDataStore.clearSavedGame()
@@ -452,9 +455,27 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             }
         }
 
-        if (_gameState.value.artifacts.any { it.name == "Falling Fragments" } && (linesToClear.size == 2 || linesToClear.size == 4)) {
-            dropFragments()
+        val currentFallingFragments = _gameState.value.fallingFragments.toMutableList()
+        val adjustedFragments = mutableListOf<Pair<Int, Int>>()
+        
+        linesToClear.sortedDescending().forEach {
+            clearedLineY ->
+            currentFallingFragments.forEach {
+                (x, y) ->
+                if (y < clearedLineY) {
+                    adjustedFragments.add(Pair(x, y + 1))
+                } else if (y > clearedLineY) {
+                    adjustedFragments.add(Pair(x, y))
+                }
+            }
         }
+        _gameState.value = _gameState.value.copy(fallingFragments = adjustedFragments)
+
+        if (_gameState.value.artifacts.any { it.name == "Falling Fragments" } && (linesToClear.size == 2 || linesToClear.size == 4)) {
+            // Start the animation, it will update fallingFragments internally
+            viewModelScope.launch { animateFallingFragments() }
+        }
+        
 
         if (_gameState.value.artifacts.any { it.name == "Board Wipe" } && linesToClear.size == 3) {
             wipeBoard()
@@ -467,9 +488,52 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             delay(300)
 
             val newBoard = board.toMutableList()
+            val removedLinesCount = linesToClear.size
             linesToClear.sorted().reversed().forEach { newBoard.removeAt(it) }
-            repeat(linesToClear.size) { newBoard.add(0, IntArray(boardWidth)) }
-            _gameState.value = _gameState.value.copy(board = newBoard.toTypedArray())
+            repeat(removedLinesCount) { newBoard.add(0, IntArray(boardWidth)) }
+            val finalBoard = newBoard.toTypedArray()
+            
+            val fragmentsWithGravity = mutableListOf<Pair<Int, Int>>()
+            _gameState.value.fallingFragments.forEach { (x, y) ->
+                var currentY = y
+                while (currentY + 1 < boardHeight && finalBoard[currentY + 1][x] == 0) {
+                    currentY++
+                }
+                fragmentsWithGravity.add(Pair(x, currentY))
+            }
+            
+            _gameState.value = _gameState.value.copy(board = finalBoard, fallingFragments = fragmentsWithGravity)
+            
+            val currentPiece = _gameState.value.piece
+            if (currentPiece != null) {
+                val pieceBottomY = _gameState.value.pieceY + currentPiece.shape.size
+                val linesClearedSet = linesToClear.toSet()
+
+                if (pieceBottomY >= 0 && pieceBottomY <= boardHeight) {
+                    var pieceCollides = false
+                    for (py in currentPiece.shape.indices) {
+                        for (px in currentPiece.shape[py].indices) {
+                            if (currentPiece.shape[py][px] != 0) {
+                                val boardX = _gameState.value.pieceX + px
+                                val boardY = _gameState.value.pieceY + py
+                                if (boardY in 0 until boardHeight && boardX in 0 until boardWidth && _gameState.value.board[boardY][boardX] != 0) {
+                                    pieceCollides = true
+                                    break
+                                }
+                                if (linesClearedSet.contains(boardY)) {
+                                    pieceCollides = true 
+                                    break
+                                }
+                            }
+                        }
+                        if(pieceCollides) break
+                    }
+
+                    if (pieceCollides) {
+                        lockPiece() 
+                    }
+                }
+            }
         }
         return linesToClear.size
     }
@@ -478,20 +542,47 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         _gameState.value = _gameState.value.copy(board = createEmptyBoard())
     }
 
-    private fun dropFragments() {
-        val newBoard = _gameState.value.board.map { it.clone() }.toTypedArray()
+    private suspend fun animateFallingFragments() {
         val random = Random()
+        val initialFragments = mutableListOf<Pair<Int, Int>>()
         repeat(2) {
-            val x = random.nextInt(boardWidth)
-            var y = 0
-            while (y + 1 < boardHeight && newBoard[y + 1][x] == 0) {
-                y++
-            }
-            if (y < boardHeight) {
-                newBoard[y][x] = 8 // Garbage block color
+            initialFragments.add(Pair(random.nextInt(boardWidth), 0))
+        }
+        _gameState.value = _gameState.value.copy(fallingFragments = initialFragments)
+
+        val fragmentAnimationJob = viewModelScope.launch {
+            var currentFragments = initialFragments.toMutableList()
+            for (i in 0 until boardHeight) { // Animate falling for a certain height
+                delay(50)
+                val nextFragments = mutableListOf<Pair<Int, Int>>()
+                var fragmentsLanded = false
+                currentFragments.forEach { (x, y) ->
+                    val nextY = y + 1
+                    if (nextY < boardHeight && _gameState.value.board[nextY][x] == 0) {
+                        nextFragments.add(Pair(x, nextY))
+                    } else {
+                        // Fragment landed or hit something, add it to the board
+                        nextFragments.add(Pair(x, y))
+                        fragmentsLanded = true
+                    }
+                }
+                currentFragments = nextFragments
+                _gameState.value = _gameState.value.copy(fallingFragments = currentFragments)
+                if (fragmentsLanded) {
+                    // If any fragment landed, update the board state and break animation
+                    val finalBoard = _gameState.value.board.map { it.clone() }.toTypedArray()
+                    currentFragments.forEach { (x, y) ->
+                        if (y >= 0 && y < boardHeight && x >= 0 && x < boardWidth) {
+                            finalBoard[y][x] = 8 // Assuming 8 is the color for falling fragments
+                        }
+                    }
+                    _gameState.value = _gameState.value.copy(board = finalBoard, fallingFragments = emptyList())
+                    return@launch // Exit coroutine once fragments land and are added to board
+                }
             }
         }
-        _gameState.value = _gameState.value.copy(board = newBoard)
+        // Wait for the animation to complete or cancel if the game state changes significantly
+        fragmentAnimationJob.join()
     }
 
     private suspend fun updateScoreAndLevel(linesCleared: Int) {

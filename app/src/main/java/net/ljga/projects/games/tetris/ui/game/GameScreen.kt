@@ -169,6 +169,14 @@ fun GameScreen(
                     }
                     drawPiece(it, gameState.pieceX, gameState.pieceY, squareSize, boardPadding)
                 }
+
+                gameState.fallingFragments.forEach { (x, y) ->
+                    drawRect(
+                        color = Color.Gray,
+                        topLeft = Offset(x * squareSize + boardPadding, y * squareSize + boardPadding),
+                        size = Size(squareSize - 2 * boardPadding, squareSize - 2 * boardPadding)
+                    )
+                }
             }
             Column(
                 modifier = Modifier.align(Alignment.TopCenter)
