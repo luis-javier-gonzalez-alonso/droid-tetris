@@ -147,7 +147,8 @@ fun GameScreen(
                     gameState.board,
                     squareSize,
                     boardPadding,
-                    gameState.clearingLines
+                    gameState.clearingLines,
+                    gameState.artifacts.any { it.name == "Board Shrinker" }
                 )
 
                 gameState.nextPiece?.let {
@@ -249,14 +250,20 @@ private fun DrawScope.drawBoardBackground(
     board: Array<IntArray>,
     squareSize: Float,
     padding: Float,
-    clearingLines: List<Int>
+    clearingLines: List<Int>,
+    isShrunk: Boolean
 ) {
     board.forEachIndexed { y, row ->
         val alpha = if (clearingLines.contains(y)) 0.5f else 1f
         row.forEachIndexed { x, color ->
+            val squareColor = if (isShrunk && x < 2) {
+                Color.DarkGray
+            } else {
+                colorFor(color)
+            }
             if (color != 0) {
                 drawRect(
-                    color = colorFor(color).copy(alpha = alpha),
+                    color = squareColor.copy(alpha = alpha),
                     topLeft = Offset(x * squareSize + padding, y * squareSize + padding),
                     size = Size(squareSize - 2 * padding, squareSize - 2 * padding)
                 )

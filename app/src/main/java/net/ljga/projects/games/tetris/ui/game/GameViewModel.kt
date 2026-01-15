@@ -391,6 +391,11 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                 if (piece.shape[py][px] != 0) {
                     val boardX = x + px
                     val boardY = y + py
+
+                    if (_gameState.value.artifacts.any { it.name == "Board Shrinker" }) {
+                        if (boardX < 2) return false
+                    }
+
                     if (boardX < 0 || boardX >= boardWidth || boardY < 0 || boardY >= boardHeight || _gameState.value.board[boardY][boardX] != 0) {
                         return false
                     }
