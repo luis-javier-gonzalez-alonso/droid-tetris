@@ -225,15 +225,21 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
     private fun addGarbageLine() {
         val state = _gameState.value
-        val newBoard = state.board.clone()
-        for (i in 0 until boardWidth) {
-            newBoard[boardHeight - 1][i] = 8 // Garbage block color
-        }
+        val newBoard = state.board.map { it.clone() }.toTypedArray()
         val random = Random()
-        val indicesToRemove = (0 until boardWidth).shuffled(random).take(3)
-        for (i in indicesToRemove) {
-            newBoard[boardHeight - 1][i] = 0
+        val randomX = random.nextInt(boardWidth)
+        var targetY = boardHeight - 1
+
+        // Find the first empty space from the bottom in the random column
+        while (targetY >= 0 && newBoard[targetY][randomX] != 0) {
+            targetY--
         }
+
+        // If an empty space is found, place the garbage block
+        if (targetY >= 0) {
+            newBoard[targetY][randomX] = 8 // Garbage block color
+        }
+
         _gameState.value = state.copy(board = newBoard)
     }
 
@@ -487,6 +493,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         _gameState.value = _gameState.value.copy(fallingFragments = adjustedFragments)
 
         if (_gameState.value.artifacts.any { it.name == "Falling Fragments" } && (linesToClear.size == 2 || linesToClear.size == 4)) {
+            // Start the animation, it will update fallingFragments internally
             viewModelScope.launch { animateFallingFragments() }
         }
         
@@ -566,7 +573,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
         val fragmentAnimationJob = viewModelScope.launch {
             var currentFragments = initialFragments.toMutableList()
-            for (i in 0 until boardHeight) {
+            for (i in 0 until boardHeight) { // Animate falling for a certain height
                 delay(50)
                 val nextFragments = mutableListOf<Pair<Int, Int>>()
                 var fragmentsLanded = false
@@ -575,6 +582,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                     if (nextY < boardHeight && _gameState.value.board[nextY][x] == 0) {
                         nextFragments.add(Pair(x, nextY))
                     } else {
+                        // Fragment landed or hit something, add it to the board
                         nextFragments.add(Pair(x, y))
                         fragmentsLanded = true
                     }
@@ -582,17 +590,19 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                 currentFragments = nextFragments
                 _gameState.value = _gameState.value.copy(fallingFragments = currentFragments)
                 if (fragmentsLanded) {
+                    // If any fragment landed, update the board state and break animation
                     val finalBoard = _gameState.value.board.map { it.clone() }.toTypedArray()
                     currentFragments.forEach { (x, y) ->
                         if (y >= 0 && y < boardHeight && x >= 0 && x < boardWidth) {
-                            finalBoard[y][x] = 8
+                            finalBoard[y][x] = 8 // Assuming 8 is the color for falling fragments
                         }
                     }
                     _gameState.value = _gameState.value.copy(board = finalBoard, fallingFragments = emptyList())
-                    return@launch
+                    return@launch // Exit coroutine once fragments land and are added to board
                 }
             }
         }
+        // Wait for the animation to complete or cancel if the game state changes significantly
         fragmentAnimationJob.join()
     }
 
@@ -748,9 +758,19 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         }
 
         if (state.selectedMutations.any { it.name == "Garbage Collector" } && Random().nextInt(10) == 0) {
-            val newBoard = state.board.clone()
+            val newBoard = state.board.map { it.clone() }.toTypedArray()
             val randomX = Random().nextInt(boardWidth)
-            newBoard[boardHeight - 1][randomX] = 8 // Garbage block color
+            var targetY = boardHeight - 1
+
+            // Find the first empty space from the bottom in the random column
+            while (targetY >= 0 && newBoard[targetY][randomX] != 0) {
+                targetY--
+            }
+
+            // If an empty space is found, place the garbage block
+            if (targetY >= 0) {
+                newBoard[targetY][randomX] = 8 // Garbage block color
+            }
             state = state.copy(board = newBoard)
         }
 
