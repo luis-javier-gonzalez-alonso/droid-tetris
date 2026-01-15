@@ -347,8 +347,22 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
         if (_gameState.value.artifacts.any { it.name == "Chaos Orb" }) {
             val newPiece = pieces.random()
-            if (isValidPosition(_gameState.value.pieceX, _gameState.value.pieceY, newPiece)) {
-                _gameState.value = _gameState.value.copy(piece = newPiece)
+            // Apply random rotation to the new piece
+            var rotatedShape = newPiece.shape
+            val numRotations = Random().nextInt(4) // 0, 1, 2, or 3 rotations
+            for (i in 0 until numRotations) {
+                val currentShape = rotatedShape
+                rotatedShape = Array(currentShape[0].size) { IntArray(currentShape.size) }
+                for (y in currentShape.indices) {
+                    for (x in currentShape[y].indices) {
+                        rotatedShape[x][currentShape.size - 1 - y] = currentShape[y][x]
+                    }
+                }
+            }
+            val finalNewPiece = Piece(rotatedShape, newPiece.color)
+
+            if (isValidPosition(_gameState.value.pieceX, _gameState.value.pieceY, finalNewPiece)) {
+                _gameState.value = _gameState.value.copy(piece = finalNewPiece)
                 updateGhostPiece()
             }
             return
@@ -472,7 +486,6 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         _gameState.value = _gameState.value.copy(fallingFragments = adjustedFragments)
 
         if (_gameState.value.artifacts.any { it.name == "Falling Fragments" } && (linesToClear.size == 2 || linesToClear.size == 4)) {
-            // Start the animation, it will update fallingFragments internally
             viewModelScope.launch { animateFallingFragments() }
         }
         
@@ -552,7 +565,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
         val fragmentAnimationJob = viewModelScope.launch {
             var currentFragments = initialFragments.toMutableList()
-            for (i in 0 until boardHeight) { // Animate falling for a certain height
+            for (i in 0 until boardHeight) { 
                 delay(50)
                 val nextFragments = mutableListOf<Pair<Int, Int>>()
                 var fragmentsLanded = false
@@ -561,7 +574,6 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                     if (nextY < boardHeight && _gameState.value.board[nextY][x] == 0) {
                         nextFragments.add(Pair(x, nextY))
                     } else {
-                        // Fragment landed or hit something, add it to the board
                         nextFragments.add(Pair(x, y))
                         fragmentsLanded = true
                     }
@@ -569,19 +581,17 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                 currentFragments = nextFragments
                 _gameState.value = _gameState.value.copy(fallingFragments = currentFragments)
                 if (fragmentsLanded) {
-                    // If any fragment landed, update the board state and break animation
                     val finalBoard = _gameState.value.board.map { it.clone() }.toTypedArray()
                     currentFragments.forEach { (x, y) ->
                         if (y >= 0 && y < boardHeight && x >= 0 && x < boardWidth) {
-                            finalBoard[y][x] = 8 // Assuming 8 is the color for falling fragments
+                            finalBoard[y][x] = 8 
                         }
                     }
                     _gameState.value = _gameState.value.copy(board = finalBoard, fallingFragments = emptyList())
-                    return@launch // Exit coroutine once fragments land and are added to board
+                    return@launch 
                 }
             }
         }
-        // Wait for the animation to complete or cancel if the game state changes significantly
         fragmentAnimationJob.join()
     }
 
