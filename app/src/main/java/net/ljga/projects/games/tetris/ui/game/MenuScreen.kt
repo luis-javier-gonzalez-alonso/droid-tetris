@@ -15,7 +15,7 @@ fun MenuScreen(
     gameViewModel: GameViewModel,
     onContinue: () -> Unit,
     onNewGame: () -> Unit,
-    onNewDebugGame: (List<GameViewModel.Mutation>, List<GameViewModel.Artifact>) -> Unit,
+    onNewDebugGame: (List<Mutation>, List<Artifact>) -> Unit,
     onMutations: () -> Unit
 ) {
     val gameState by gameViewModel.gameState.collectAsState()

@@ -4,7 +4,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -148,7 +147,7 @@ fun GameScreen(
                     squareSize,
                     boardPadding,
                     gameState.clearingLines,
-                    gameState.artifacts.any { it.name == "Board Shrinker" }
+                    gameState.artifacts.any { it is BoardShrinkerArtifact }
                 )
 
                 gameState.nextPiece?.let {
@@ -156,7 +155,7 @@ fun GameScreen(
                     drawPiece(it, startX, 0, squareSize, boardPadding, alpha = 0.3f)
                 }
 
-                if (gameState.selectedMutations.any { it.name == "Clairvoyance" }) {
+                if (gameState.selectedMutations.any { it is ClairvoyanceMutation }) {
                     gameState.secondNextPiece?.let {
                         val startX = gameViewModel.boardWidth / 2 - it.shape[0].size / 2
                         drawPiece(it, startX, 4, squareSize, boardPadding, alpha = 0.15f)
@@ -164,7 +163,7 @@ fun GameScreen(
                 }
 
                 gameState.piece?.let {
-                    if (gameState.selectedMutations.any { it.name == "Phantom Piece" }) {
+                    if (gameState.selectedMutations.any { it is PhantomPieceMutation }) {
                         drawPiece(it, gameState.pieceX, gameState.ghostPieceY, squareSize, boardPadding, alpha = 0.2f)
                     }
                     drawPiece(it, gameState.pieceX, gameState.pieceY, squareSize, boardPadding)
@@ -221,8 +220,8 @@ fun GameScreen(
 
 @Composable
 fun ArtifactSelectionDialog(
-    choices: List<GameViewModel.Artifact>,
-    onSelect: (GameViewModel.Artifact) -> Unit
+    choices: List<Artifact>,
+    onSelect: (Artifact) -> Unit
 ) {
     Dialog(onDismissRequest = { /* Do nothing, user must select an artifact */ }) {
         Surface {
