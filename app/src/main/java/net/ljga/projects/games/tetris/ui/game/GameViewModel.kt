@@ -7,7 +7,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import android.util.Log
 import java.util.Random
@@ -28,6 +30,12 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     private var _mutations = MutableStateFlow<List<Mutation>>(emptyList())
     val mutations: StateFlow<List<Mutation>> = _mutations
 
+    val coins: StateFlow<Int> = preferenceDataStore.coins
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+    
+    val ownedBadges: StateFlow<Set<String>> = preferenceDataStore.ownedBadges
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+
     var debugMutations: List<Mutation> = emptyList()
     var debugArtifacts: List<Artifact> = emptyList()
 
@@ -37,6 +45,8 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         viewModelScope.launch {
             _highScore.value = preferenceDataStore.highScore.first()
             val unlockedMutationNames = preferenceDataStore.unlockedMutations.first()
+            _highScore.value = preferenceDataStore.highScore.first()
+            val ownedBadgesNames = preferenceDataStore.ownedBadges.first()
             _mutations.value = allMutations.filter { unlockedMutationNames.contains(it.name) }
 
             preferenceDataStore.gameState.first()?.let {
@@ -68,7 +78,8 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         val artifactChoices: List<Artifact>,
         var rotationCount: Int,
         val isDebugMode: Boolean,
-        val fallingFragments: List<Pair<Int, Int>>
+        val fallingFragments: List<Pair<Int, Int>>,
+        val pendingMutationPopup: GameMechanic? = null // For showing acquired artifacts/mutations
     ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -96,6 +107,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             if (rotationCount != other.rotationCount) return false
             if (isDebugMode != other.isDebugMode) return false
             if (fallingFragments != other.fallingFragments) return false
+            if (pendingMutationPopup != other.pendingMutationPopup) return false
 
             return true
         }
@@ -121,6 +133,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
             result = 31 * result + rotationCount
             result = 31 * result + isDebugMode.hashCode()
             result = 31 * result + fallingFragments.hashCode()
+            result = 31 * result + (pendingMutationPopup?.hashCode() ?: 0)
             return result
         }
     }
@@ -234,7 +247,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         viewModelScope.launch {
             val isDebugMode = mutations.isNotEmpty() || artifacts.isNotEmpty()
             val startingMutations = if (isDebugMode) mutations else {
-                val unlockedMutationNames = preferenceDataStore.unlockedMutations.first()
+                val unlockedMutationNames = preferenceDataStore.ownedBadges.first()
                 val unlockedMutations = allMutations.filter { unlockedMutationNames.contains(it.name) }
                 if (unlockedMutations.isNotEmpty()) listOf(unlockedMutations.random()) else emptyList()
             }
@@ -334,6 +347,15 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                 preferenceDataStore.updateHighScore(_gameState.value.currentScore)
             }
         }
+        
+        // Award coins based on score (1 coin per 100 points)
+        val coinsEarned = _gameState.value.currentScore / 100
+        if (coinsEarned > 0) {
+            viewModelScope.launch {
+                preferenceDataStore.addCoins(coinsEarned)
+            }
+        }
+
         _gameState.value = _gameState.value.copy(isGameOver = true)
         gameJob?.cancel()
         gameJob = null
@@ -525,7 +547,7 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                 currentBoss.requiredLines -= linesCleared
                 if (currentBoss.requiredLines <= 0) {
                     _gameState.value = _gameState.value.copy(currentScore = _gameState.value.currentScore + 5000 * _gameState.value.level)
-                    unlockNextMutation()
+                    // unlockNextMutation() - REMOVED for Badge Shop system
                     addRandomMutationToRun()
                     currentBoss = null
                 }
@@ -577,9 +599,25 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         viewModelScope.launch {
             _gameState.value = _gameState.value.copy(
                 artifacts = _gameState.value.artifacts + artifact,
-                artifactChoices = emptyList()
+                artifactChoices = emptyList(),
+                pendingMutationPopup = artifact
             )
-            continueGame()
+            // Game remains paused until popup is dismissed
+        }
+    }
+
+    fun dismissMutationPopup() {
+        _gameState.value = _gameState.value.copy(pendingMutationPopup = null)
+        continueGame()
+    }
+
+    fun purchaseBadge(badgeName: String, cost: Int) {
+        viewModelScope.launch {
+            if (preferenceDataStore.purchaseBadge(badgeName, cost)) {
+                // Update local list of mutations if needed, or just let flows update
+                val owned = preferenceDataStore.ownedBadges.first()
+                _mutations.value = allMutations.filter { owned.contains(it.name) }
+            }
         }
     }
 
@@ -589,18 +627,10 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         return boss
     }
 
-    private suspend fun unlockNextMutation() {
-        val unlockedNames = preferenceDataStore.unlockedMutations.first()
-        val availableToUnlock = allMutations.filter { !unlockedNames.contains(it.name) }
-        if (availableToUnlock.isNotEmpty()) {
-            val nextMutation = availableToUnlock.random()
-            preferenceDataStore.unlockMutation(nextMutation.name)
-            _mutations.value = _mutations.value + nextMutation
-        }
-    }
+    // private suspend fun unlockNextMutation() - REMOVED
 
     private suspend fun addRandomMutationToRun() {
-        val unlockedMutationNames = preferenceDataStore.unlockedMutations.first()
+        val unlockedMutationNames = preferenceDataStore.ownedBadges.first()
         val availableMutations = allMutations.filter { unlockedMutationNames.contains(it.name) && !_gameState.value.selectedMutations.contains(it) }
         if (availableMutations.isNotEmpty()) {
             val newMutation = availableMutations.random()

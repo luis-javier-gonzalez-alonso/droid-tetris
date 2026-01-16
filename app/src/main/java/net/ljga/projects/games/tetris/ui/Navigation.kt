@@ -24,6 +24,7 @@ import net.ljga.projects.games.tetris.ui.game.GameScreen
 import net.ljga.projects.games.tetris.ui.game.GameViewModel
 import net.ljga.projects.games.tetris.ui.game.MenuScreen
 import net.ljga.projects.games.tetris.ui.game.MutationsScreen
+import net.ljga.projects.games.tetris.ui.game.ShopScreen
 
 @Composable
 fun MainNavigation(gameViewModel: GameViewModel) {
@@ -47,6 +48,9 @@ fun MainNavigation(gameViewModel: GameViewModel) {
                 },
                 onMutations = {
                     navController.navigate("mutations")
+                },
+                onShop = {
+                    navController.navigate("shop")
                 }
             )
         }
@@ -57,6 +61,11 @@ fun MainNavigation(gameViewModel: GameViewModel) {
         }
         composable("mutations") {
             MutationsScreen(gameViewModel)
+        }
+        composable("shop") {
+            ShopScreen(gameViewModel) {
+                navController.popBackStack()
+            }
         }
     }
 }

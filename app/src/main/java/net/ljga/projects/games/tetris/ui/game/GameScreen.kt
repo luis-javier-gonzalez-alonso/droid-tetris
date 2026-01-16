@@ -1,6 +1,7 @@
 package net.ljga.projects.games.tetris.ui.game
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -43,13 +44,15 @@ fun GameScreen(
 
     if (gameState.isGameOver) {
         Dialog(onDismissRequest = onBack) {
-            Surface {
+            Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Game Over", modifier = Modifier.padding(bottom = 8.dp))
-                    Text("Your score: ${gameState.currentScore}")
+                    Text("Game Over", style = androidx.compose.material3.MaterialTheme.typography.headlineMedium)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Your score: ${gameState.currentScore}", style = androidx.compose.material3.MaterialTheme.typography.bodyLarge)
+                    Spacer(modifier = Modifier.height(24.dp))
                     Button(onClick = {
                         gameViewModel.newGame()
                         onBack()
@@ -65,154 +68,175 @@ fun GameScreen(
         ArtifactSelectionDialog(
             choices = gameState.artifactChoices,
             onSelect = { artifact ->
-                coroutineScope.launch {
-                    gameViewModel.selectArtifact(artifact)
-                }
+                gameViewModel.selectArtifact(artifact)
             }
         )
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Text("Score: ${gameState.currentScore}")
-            Text("Level: ${gameState.level}")
-            Text("Lines: ${gameState.linesUntilNextLevel}")
-        }
+    // Mutation/Artifact Acquired Popup
+    gameState.pendingMutationPopup?.let { mechanic ->
+        MutationPopup(
+            mechanic = mechanic,
+            onDismiss = {
+                gameViewModel.dismissMutationPopup()
+            }
+        )
+    }
 
-        gameState.currentBoss?.let {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("Boss: ${it.name}")
-                Text("Lines to clear: ${it.requiredLines}")
+    Row(modifier = Modifier.fillMaxSize()) {
+        // Left Column: Artifacts
+        Column(
+            modifier = Modifier
+                .width(64.dp)
+                .fillMaxHeight()
+                .background(Color.Black.copy(alpha = 0.1f))
+                .padding(vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            gameState.artifacts.forEach { artifact ->
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(id = artifact.iconResId),
+                    contentDescription = artifact.name,
+                    modifier = Modifier.size(48.dp)
+                )
             }
         }
 
-        Box(
-            modifier = Modifier.fillMaxWidth().weight(1f),
-            contentAlignment = Alignment.Center
+        // Center: Game Board and Info
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
         ) {
-            Canvas(
+            Row(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp)
-                    .aspectRatio(gameViewModel.boardWidth.toFloat() / gameViewModel.boardHeight.toFloat())
-                    .pointerInput(Unit) {
-                        detectTapGestures(onTap = { gameViewModel.rotate() })
-                    }
-                    .pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragStart = {
-                                accumulatedDragX = 0f
-                                accumulatedDragY = 0f
-                            },
-                            onDrag = { change, dragAmount ->
-                                accumulatedDragX += dragAmount.x
-                                accumulatedDragY += dragAmount.y
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Text("Score: ${gameState.currentScore}")
+                Text("Level: ${gameState.level}")
+            }
 
-                                val squareSizeWidth =
-                                    (size.width / 4) / gameViewModel.boardWidth.toFloat()
-                                val squareSizeHeight =
-                                    (size.height / 4) / gameViewModel.boardHeight.toFloat()
+            gameState.currentBoss?.let {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Boss: ${it.name}", color = Color.Red, style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+                    Text("Lines: ${it.requiredLines}")
+                }
+            }
 
-                                if (accumulatedDragX > squareSizeWidth) {
-                                    gameViewModel.moveRight()
-                                    accumulatedDragX -= squareSizeWidth
-                                } else if (accumulatedDragX < -squareSizeWidth) {
-                                    gameViewModel.moveLeft()
-                                    accumulatedDragX += squareSizeWidth
-                                }
-
-                                if (accumulatedDragY > squareSizeHeight) {
-                                    gameViewModel.moveDown()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp)
+                        .aspectRatio(gameViewModel.boardWidth.toFloat() / gameViewModel.boardHeight.toFloat())
+                        .pointerInput(Unit) {
+                            detectTapGestures(onTap = { gameViewModel.rotate() })
+                        }
+                        .pointerInput(Unit) {
+                            detectDragGestures(
+                                onDragStart = {
                                     accumulatedDragX = 0f
-                                    accumulatedDragY -= squareSizeHeight
+                                    accumulatedDragY = 0f
+                                },
+                                onDrag = { change, dragAmount ->
+                                    accumulatedDragX += dragAmount.x
+                                    accumulatedDragY += dragAmount.y
+
+                                    val squareSizeWidth =
+                                        (size.width / 4) / gameViewModel.boardWidth.toFloat()
+                                    val squareSizeHeight =
+                                        (size.height / 4) / gameViewModel.boardHeight.toFloat()
+
+                                    if (accumulatedDragX > squareSizeWidth) {
+                                        gameViewModel.moveRight()
+                                        accumulatedDragX -= squareSizeWidth
+                                    } else if (accumulatedDragX < -squareSizeWidth) {
+                                        gameViewModel.moveLeft()
+                                        accumulatedDragX += squareSizeWidth
+                                    }
+
+                                    if (accumulatedDragY > squareSizeHeight) {
+                                        gameViewModel.moveDown()
+                                        accumulatedDragX = 0f
+                                        accumulatedDragY -= squareSizeHeight
+                                    }
                                 }
-                            }
+                            )
+                        }
+                ) {
+                    val squareSize = minOf(
+                        size.width / gameViewModel.boardWidth,
+                        size.height / gameViewModel.boardHeight
+                    )
+                    val boardPadding = 2.dp.toPx()
+
+                    drawBoardBackground(
+                        gameState.board,
+                        squareSize,
+                        boardPadding,
+                        gameState.clearingLines,
+                        gameState.artifacts.any { it is BoardShrinkerArtifact }
+                    )
+
+                    gameState.nextPiece?.let {
+                        val startX = gameViewModel.boardWidth / 2 - it.shape[0].size / 2
+                        drawPiece(it, startX, 0, squareSize, boardPadding, alpha = 0.3f)
+                    }
+
+                    if (gameState.selectedMutations.any { it is ClairvoyanceMutation }) {
+                        gameState.secondNextPiece?.let {
+                            val startX = gameViewModel.boardWidth / 2 - it.shape[0].size / 2
+                            drawPiece(it, startX, 4, squareSize, boardPadding, alpha = 0.15f)
+                        }
+                    }
+
+                    gameState.piece?.let {
+                        if (gameState.selectedMutations.any { it is PhantomPieceMutation }) {
+                            drawPiece(it, gameState.pieceX, gameState.ghostPieceY, squareSize, boardPadding, alpha = 0.2f)
+                        }
+                        drawPiece(it, gameState.pieceX, gameState.pieceY, squareSize, boardPadding)
+                    }
+
+                    gameState.fallingFragments.forEach { (x, y) ->
+                        drawRect(
+                            color = Color.Gray,
+                            topLeft = Offset(x * squareSize + boardPadding, y * squareSize + boardPadding),
+                            size = Size(squareSize - 2 * boardPadding, squareSize - 2 * boardPadding)
                         )
                     }
-            ) {
-                val squareSize = minOf(
-                    size.width / gameViewModel.boardWidth,
-                    size.height / gameViewModel.boardHeight
-                )
-                val boardPadding = 2.dp.toPx()
-
-                drawBoardBackground(
-                    gameState.board,
-                    squareSize,
-                    boardPadding,
-                    gameState.clearingLines,
-                    gameState.artifacts.any { it is BoardShrinkerArtifact }
-                )
-
-                gameState.nextPiece?.let {
-                    val startX = gameViewModel.boardWidth / 2 - it.shape[0].size / 2
-                    drawPiece(it, startX, 0, squareSize, boardPadding, alpha = 0.3f)
-                }
-
-                if (gameState.selectedMutations.any { it is ClairvoyanceMutation }) {
-                    gameState.secondNextPiece?.let {
-                        val startX = gameViewModel.boardWidth / 2 - it.shape[0].size / 2
-                        drawPiece(it, startX, 4, squareSize, boardPadding, alpha = 0.15f)
-                    }
-                }
-
-                gameState.piece?.let {
-                    if (gameState.selectedMutations.any { it is PhantomPieceMutation }) {
-                        drawPiece(it, gameState.pieceX, gameState.ghostPieceY, squareSize, boardPadding, alpha = 0.2f)
-                    }
-                    drawPiece(it, gameState.pieceX, gameState.pieceY, squareSize, boardPadding)
-                }
-
-                gameState.fallingFragments.forEach { (x, y) ->
-                    drawRect(
-                        color = Color.Gray,
-                        topLeft = Offset(x * squareSize + boardPadding, y * squareSize + boardPadding),
-                        size = Size(squareSize - 2 * boardPadding, squareSize - 2 * boardPadding)
-                    )
                 }
             }
-            Column(
-                modifier = Modifier.align(Alignment.TopCenter)
-            ) {
-                if (gameState.artifacts.isNotEmpty()) {
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        items(gameState.artifacts) { artifact ->
-                            Card(modifier = Modifier.padding(end = 8.dp)) {
-                                Column(modifier = Modifier.padding(8.dp)) {
-                                    Text(artifact.name)
-                                    Text(artifact.description)
-                                }
-                            }
-                        }
-                    }
-                }
+        }
 
-                if (gameState.selectedMutations.isNotEmpty()) {
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        items(gameState.selectedMutations) { mutation ->
-                            Card(modifier = Modifier.padding(end = 8.dp)) {
-                                Column(modifier = Modifier.padding(8.dp)) {
-                                    Text(mutation.name)
-                                    Text(mutation.description)
-                                }
-                            }
-                        }
-                    }
-                }
+        // Right Column: Mutations
+        Column(
+            modifier = Modifier
+                .width(64.dp)
+                .fillMaxHeight()
+                .background(Color.Black.copy(alpha = 0.1f))
+                .padding(vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            gameState.selectedMutations.forEach { mutation ->
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(id = mutation.iconResId),
+                    contentDescription = mutation.name,
+                    modifier = Modifier.size(48.dp)
+                )
             }
         }
     }
@@ -223,31 +247,99 @@ fun ArtifactSelectionDialog(
     choices: List<Artifact>,
     onSelect: (Artifact) -> Unit
 ) {
-    Dialog(onDismissRequest = { /* Do nothing, user must select an artifact */ }) {
-        Surface {
+    Dialog(onDismissRequest = { /* Prevent dismissal without selection */ }) {
+        Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)) {
             Column(
                 modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text("Choose an Artifact", style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
                 Spacer(modifier = Modifier.height(16.dp))
-                choices.forEach { artifact ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .pointerInput(artifact) {
-                                detectTapGestures {
-                                    onSelect(artifact)
-                                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    choices.forEach { artifact ->
+                        Card(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(4.dp)
+                                .aspectRatio(0.7f)
+                                .pointerInput(artifact) {
+                                    detectTapGestures {
+                                        onSelect(artifact)
+                                    }
+                                },
+                            elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                androidx.compose.foundation.Image(
+                                    painter = androidx.compose.ui.res.painterResource(id = artifact.iconResId),
+                                    contentDescription = artifact.name,
+                                    modifier = Modifier.size(64.dp)
+                                )
+                                Text(
+                                    text = artifact.name,
+                                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                                Text(
+                                    text = artifact.description,
+                                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    maxLines = 3,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
                             }
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(artifact.name, style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
-                            Text(artifact.description)
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun MutationPopup(
+    mechanic: GameMechanic,
+    onDismiss: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        // Transparent background click to dismiss is handled by Dialog if we don't consume it?
+        // But user wants "tap screen".
+        // We'll make the surface clickable.
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pointerInput(Unit) {
+                    detectTapGestures { onDismiss() }
+                },
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+            color = Color.White
+        ) {
+            Column(
+                modifier = Modifier.padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("New Power Acquired!", style = androidx.compose.material3.MaterialTheme.typography.headlineSmall, color = Color(0xFFD35400))
+                Spacer(modifier = Modifier.height(24.dp))
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(id = mechanic.iconResId),
+                    contentDescription = mechanic.name,
+                    modifier = Modifier.size(96.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(mechanic.name, style = androidx.compose.material3.MaterialTheme.typography.titleLarge)//, androidx.compose.ui.text.font.FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(mechanic.description, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Spacer(modifier = Modifier.height(24.dp))
+                Text("Tap anywhere to continue", style = androidx.compose.material3.MaterialTheme.typography.labelMedium, color = Color.Gray)
             }
         }
     }

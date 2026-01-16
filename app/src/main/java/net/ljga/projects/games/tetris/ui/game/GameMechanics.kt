@@ -2,6 +2,8 @@ package net.ljga.projects.games.tetris.ui.game
 
 import java.util.Random
 
+import net.ljga.projects.games.tetris.R
+
 /**
  * Base interface for all game mechanics (mutations and artifacts).
  * Provides common properties for display in the UI.
@@ -11,6 +13,8 @@ interface GameMechanic {
     val name: String
     /** User-facing description of what the mechanic does */
     val description: String
+    /** Resource ID for the mechanic's icon */
+    val iconResId: Int
 }
 
 /**
@@ -111,16 +115,16 @@ interface IRequiresGhostPiece : GameMechanic
  * Base class for all mutations.
  * Mutations are permanent modifiers selected at the start of a run.
  */
-abstract class Mutation(override val name: String, override val description: String) : GameMechanic
+abstract class Mutation(override val name: String, override val description: String, override val iconResId: Int) : GameMechanic
 
 /**
  * Base class for all artifacts.
  * Artifacts are temporary power-ups collected during gameplay.
  */
-abstract class Artifact(override val name: String, override val description: String) : GameMechanic
+abstract class Artifact(override val name: String, override val description: String, override val iconResId: Int) : GameMechanic
 
 
-class UnyieldingMutation : Mutation("Unyielding", "Start with one line of garbage blocks, and a new one for each level"), IOnNewGameHook, IOnLevelUpHook {
+class UnyieldingMutation : Mutation("Unyielding", "Start with one line of garbage blocks, and a new one for each level", R.drawable.ic_mutation_unyielding), IOnNewGameHook, IOnLevelUpHook {
     private fun addGarbageLine(board: Array<IntArray>): Array<IntArray> {
         val newBoard = board.map { it.clone() }.toTypedArray()
         val random = Random()
@@ -149,21 +153,21 @@ class UnyieldingMutation : Mutation("Unyielding", "Start with one line of garbag
     }
 }
 
-class FeatherFallMutation : Mutation("Feather Fall", "Pieces fall 20% slower"), ITickDelayModifier {
+class FeatherFallMutation : Mutation("Feather Fall", "Pieces fall 20% slower", R.drawable.ic_mutation_featherfall), ITickDelayModifier {
     override fun modifyTickDelay(delay: Long): Long {
         return (delay * 1.2).toLong()
     }
 }
 
-class LeadFallMutation : Mutation("Lead Fall", "Pieces fall 25% faster"), ITickDelayModifier {
+class LeadFallMutation : Mutation("Lead Fall", "Pieces fall 25% faster", R.drawable.ic_mutation_leadfall), ITickDelayModifier {
     override fun modifyTickDelay(delay: Long): Long {
         return (delay * 0.75).toLong()
     }
 }
 
-class ClairvoyanceMutation : Mutation("Clairvoyance", "See the next two pieces instead of one")
+class ClairvoyanceMutation : Mutation("Clairvoyance", "See the next two pieces instead of one", R.drawable.ic_mutation_clairvoyance)
 
-class ColorblindMutation : Mutation("Colorblind", "All pieces are the same color"), IOnPieceSpawnHook {
+class ColorblindMutation : Mutation("Colorblind", "All pieces are the same color", R.drawable.ic_mutation_colorblind), IOnPieceSpawnHook {
     override fun onPieceSpawn(gameState: GameViewModel.GameState): GameViewModel.GameState {
         val piece = gameState.piece ?: return gameState
         val nextPiece = gameState.nextPiece
@@ -176,7 +180,7 @@ class ColorblindMutation : Mutation("Colorblind", "All pieces are the same color
     }
 }
 
-class MoreIsMutation : Mutation("More 'I's", "Increases the frequency of 'I' pieces"), IOnPieceSpawnHook {
+class MoreIsMutation : Mutation("More 'I's", "Increases the frequency of 'I' pieces", R.drawable.ic_mutation_more_is), IOnPieceSpawnHook {
     override fun onPieceSpawn(gameState: GameViewModel.GameState): GameViewModel.GameState {
         if (Random().nextInt(5) == 0) {
             val iPiece = GameViewModel.pieces.first() // I-piece is first in the list
@@ -186,7 +190,7 @@ class MoreIsMutation : Mutation("More 'I's", "Increases the frequency of 'I' pie
     }
 }
 
-class GarbageCollectorMutation : Mutation("Garbage Collector", "Spawning a piece has a chance to add a garbage block"), IOnPieceSpawnHook {
+class GarbageCollectorMutation : Mutation("Garbage Collector", "Spawning a piece has a chance to add a garbage block", R.drawable.ic_mutation_unyielding), IOnPieceSpawnHook {
     override fun onPieceSpawn(gameState: GameViewModel.GameState): GameViewModel.GameState {
         if (Random().nextInt(10) == 0) {
             val newBoard = gameState.board.map { it.clone() }.toTypedArray()
@@ -209,7 +213,7 @@ class GarbageCollectorMutation : Mutation("Garbage Collector", "Spawning a piece
     }
 }
 
-class TimeWarpMutation : Mutation("Time Warp", "Clearing a line has a 10% chance to freeze the game for 2 seconds"), IOnLineClearHook {
+class TimeWarpMutation : Mutation("Time Warp", "Clearing a line has a 10% chance to freeze the game for 2 seconds", R.drawable.ic_mutation_unyielding), IOnLineClearHook {
     override suspend fun onLineClear(gameState: GameViewModel.GameState, linesCleared: Int): GameViewModel.GameState {
         if (linesCleared > 0 && Random().nextInt(10) == 0) {
             kotlinx.coroutines.delay(2000)
@@ -218,7 +222,7 @@ class TimeWarpMutation : Mutation("Time Warp", "Clearing a line has a 10% chance
     }
 }
 
-class FairPlayMutation : Mutation("Fair Play", "All 7 unique pieces will spawn before any are repeated"), IOnPieceSpawnHook {
+class FairPlayMutation : Mutation("Fair Play", "All 7 unique pieces will spawn before any are repeated", R.drawable.ic_mutation_unyielding), IOnPieceSpawnHook {
     override fun onPieceSpawn(gameState: GameViewModel.GameState): GameViewModel.GameState {
         var queue = gameState.pieceQueue
         if (queue.isEmpty()) {
@@ -247,17 +251,17 @@ class FairPlayMutation : Mutation("Fair Play", "All 7 unique pieces will spawn b
     }
 }
 
-class PhantomPieceMutation : Mutation("Phantom Piece", "Shows a ghost of where the current piece will land"), IRequiresGhostPiece
+class PhantomPieceMutation : Mutation("Phantom Piece", "Shows a ghost of where the current piece will land", R.drawable.ic_mutation_unyielding), IRequiresGhostPiece
 
 // Artifacts
 
-class SwiftnessCharmArtifact : Artifact("Swiftness Charm", "Increases piece drop speed by 10%"), ITickDelayModifier {
+class SwiftnessCharmArtifact : Artifact("Swiftness Charm", "Increases piece drop speed by 10%", R.drawable.ic_mutation_unyielding), ITickDelayModifier {
     override fun modifyTickDelay(delay: Long): Long {
         return (delay * 0.9).toLong()
     }
 }
 
-class LineClearerArtifact : Artifact("Line Clearer", "Clears an extra line randomly"), IBeforeLineClearHook {
+class LineClearerArtifact : Artifact("Line Clearer", "Clears an extra line randomly", R.drawable.ic_mutation_unyielding), IBeforeLineClearHook {
     override fun beforeLineClear(linesToClear: List<Int>, gameState: GameViewModel.GameState): List<Int> {
         if (linesToClear.isNotEmpty()) {
             val randomLine = (0 until gameState.board.size).random()
@@ -269,19 +273,19 @@ class LineClearerArtifact : Artifact("Line Clearer", "Clears an extra line rando
     }
 }
 
-class ScoreMultiplierArtifact : Artifact("Score Multiplier", "Multiplies score from line clears by 1.5x"), IScoreModifier {
+class ScoreMultiplierArtifact : Artifact("Score Multiplier", "Multiplies score from line clears by 1.5x", R.drawable.ic_mutation_unyielding), IScoreModifier {
     override fun modifyScore(points: Int, linesCleared: Int, level: Int): Int {
         return (points * 1.5).toInt()
     }
 }
 
-class SpringLoadedRotatorArtifact : Artifact("Spring-loaded Rotator", "Rotating moves the piece up one space"), IPostRotationPlacementModifier {
+class SpringLoadedRotatorArtifact : Artifact("Spring-loaded Rotator", "Rotating moves the piece up one space", R.drawable.ic_mutation_unyielding), IPostRotationPlacementModifier {
     override fun modifyPlacement(x: Int, y: Int, piece: GameViewModel.Piece, gameState: GameViewModel.GameState): Pair<Int, Int> {
         return Pair(x, y - 1)
     }
 }
 
-class ChaosOrbArtifact : Artifact("Chaos Orb", "Rotating changes the piece type"), IRotationOverride {
+class ChaosOrbArtifact : Artifact("Chaos Orb", "Rotating changes the piece type", R.drawable.ic_mutation_unyielding), IRotationOverride {
     override fun onRotate(gameState: GameViewModel.GameState): GameViewModel.GameState {
         val newPiece = GameViewModel.pieces.random()
         var rotatedShape = newPiece.shape
@@ -305,7 +309,7 @@ class ChaosOrbArtifact : Artifact("Chaos Orb", "Rotating changes the piece type"
     }
 }
 
-class FallingFragmentsArtifact : Artifact("Falling Fragments", "When completing 2 or 4 lines, 2 single-square pieces drop from the top in random positions."), IOnLineClearHook {
+class FallingFragmentsArtifact : Artifact("Falling Fragments", "When completing 2 or 4 lines, 2 single-square pieces drop from the top in random positions.", R.drawable.ic_mutation_unyielding), IOnLineClearHook {
     override suspend fun onLineClear(gameState: GameViewModel.GameState, linesCleared: Int): GameViewModel.GameState {
         if (linesCleared == 2 || linesCleared == 4) {
             // This logic was originally in GameViewModel and starts a coroutine.
@@ -322,7 +326,7 @@ class FallingFragmentsArtifact : Artifact("Falling Fragments", "When completing 
     }
 }
 
-class BoardWipeArtifact : Artifact("Board Wipe", "Single-use: Clearing 3 lines at the same time clears the entire board."), IOnLineClearHook {
+class BoardWipeArtifact : Artifact("Board Wipe", "Single-use: Clearing 3 lines at the same time clears the entire board.", R.drawable.ic_mutation_unyielding), IOnLineClearHook {
     override suspend fun onLineClear(gameState: GameViewModel.GameState, linesCleared: Int): GameViewModel.GameState {
         if (linesCleared == 3) {
             val newArtifacts = gameState.artifacts.filter { it.name != name }
@@ -332,13 +336,13 @@ class BoardWipeArtifact : Artifact("Board Wipe", "Single-use: Clearing 3 lines a
     }
 }
 
-class InvertedRotationArtifact : Artifact("Inverted Rotation", "Inverts the rotation direction of pieces"), IRotationDirectionModifier {
+class InvertedRotationArtifact : Artifact("Inverted Rotation", "Inverts the rotation direction of pieces", R.drawable.ic_mutation_unyielding), IRotationDirectionModifier {
     override fun isInverted(): Boolean {
         return true
     }
 }
 
-class PieceSwapperArtifact : Artifact("Piece Swapper", "Swap the current piece with the next piece by rotating twice"), IRotationOverride {
+class PieceSwapperArtifact : Artifact("Piece Swapper", "Swap the current piece with the next piece by rotating twice", R.drawable.ic_mutation_unyielding), IRotationOverride {
     override fun onRotate(gameState: GameViewModel.GameState): GameViewModel.GameState? {
         if (gameState.rotationCount >= 2) {
             return gameState.copy(
@@ -351,7 +355,7 @@ class PieceSwapperArtifact : Artifact("Piece Swapper", "Swap the current piece w
     }
 }
 
-class BoardShrinkerArtifact : Artifact("Board Shrinker", "Reduces the board width by 2 columns"), IPositionValidator, IOnPieceSpawnHook {
+class BoardShrinkerArtifact : Artifact("Board Shrinker", "Reduces the board width by 2 columns", R.drawable.ic_mutation_unyielding), IPositionValidator, IOnPieceSpawnHook {
     override fun onPieceSpawn(gameState: GameViewModel.GameState): GameViewModel.GameState {
         val piece = gameState.piece ?: return gameState
         // Adjust spawn X to be centered in the shrunk (8-column) area

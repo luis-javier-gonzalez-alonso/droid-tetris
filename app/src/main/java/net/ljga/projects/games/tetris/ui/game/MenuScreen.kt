@@ -16,10 +16,12 @@ fun MenuScreen(
     onContinue: () -> Unit,
     onNewGame: () -> Unit,
     onNewDebugGame: (List<Mutation>, List<Artifact>) -> Unit,
-    onMutations: () -> Unit
+    onMutations: () -> Unit,
+    onShop: () -> Unit
 ) {
     val gameState by gameViewModel.gameState.collectAsState()
     val highScore by gameViewModel.highScore.collectAsState()
+    val coins by gameViewModel.coins.collectAsState()
     var showDebugMenu by remember { mutableStateOf(false) }
 
     if (showDebugMenu) {
@@ -39,6 +41,8 @@ fun MenuScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("High Score: $highScore")
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("Coins: $coins", style = MaterialTheme.typography.titleMedium, color = androidx.compose.ui.graphics.Color(0xFFFFD700))
         Spacer(modifier = Modifier.height(32.dp))
 
         if (gameState.piece != null) {
@@ -56,6 +60,12 @@ fun MenuScreen(
 
         Button(onClick = onMutations) {
             Text("Mutations")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(onClick = onShop) {
+            Text("Badge Shop")
         }
 
         Spacer(modifier = Modifier.height(32.dp))
