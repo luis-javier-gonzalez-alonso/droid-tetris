@@ -36,6 +36,12 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     val ownedBadges: StateFlow<Set<String>> = preferenceDataStore.ownedBadges
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
 
+    val unlockedMutations: StateFlow<Set<String>> = preferenceDataStore.unlockedMutations
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+
+    val enabledMutations: StateFlow<Set<String>> = preferenceDataStore.enabledMutations
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+
     var debugMutations: List<Mutation> = emptyList()
     var debugArtifacts: List<Artifact> = emptyList()
 
@@ -44,10 +50,9 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     init {
         viewModelScope.launch {
             _highScore.value = preferenceDataStore.highScore.first()
-            val unlockedMutationNames = preferenceDataStore.unlockedMutations.first()
             _highScore.value = preferenceDataStore.highScore.first()
-            val ownedBadgesNames = preferenceDataStore.ownedBadges.first()
-            _mutations.value = allMutations.filter { unlockedMutationNames.contains(it.name) }
+            val activeMutationNames = preferenceDataStore.enabledMutations.first()
+            _mutations.value = allMutations.filter { activeMutationNames.contains(it.name) }
 
             preferenceDataStore.gameState.first()?.let {
                 _gameState.value = it
@@ -160,6 +165,8 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
     data class Boss(val name: String, var requiredLines: Int)
 
+    data class Badge(val id: String, val name: String, val iconResId: Int, val cost: Int)
+
     companion object {
         val pieces = listOf(
             Piece(arrayOf(intArrayOf(1, 1, 1, 1)), 1), // I
@@ -213,6 +220,33 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         BoardShrinkerArtifact()
     )
 
+    val allBadges = listOf(
+        Badge("axe", "Axe", net.ljga.projects.games.tetris.R.drawable.ic_badge_axe, 300),
+        Badge("bomb", "Bomb", net.ljga.projects.games.tetris.R.drawable.ic_badge_bomb, 300),
+        Badge("book", "Book", net.ljga.projects.games.tetris.R.drawable.ic_badge_book, 300),
+        Badge("boots", "Boots", net.ljga.projects.games.tetris.R.drawable.ic_badge_boots, 300),
+        Badge("bulb", "Bulb", net.ljga.projects.games.tetris.R.drawable.ic_badge_bulb, 300),
+        Badge("cat", "Cat", net.ljga.projects.games.tetris.R.drawable.ic_badge_cat, 300),
+        Badge("chest", "Chest", net.ljga.projects.games.tetris.R.drawable.ic_badge_chest, 500),
+        Badge("coin", "Coin", net.ljga.projects.games.tetris.R.drawable.ic_badge_coin, 300),
+        Badge("dog", "Dog", net.ljga.projects.games.tetris.R.drawable.ic_badge_dog, 300),
+        Badge("feather", "Feather", net.ljga.projects.games.tetris.R.drawable.ic_badge_feather, 300),
+        Badge("fire", "Fire", net.ljga.projects.games.tetris.R.drawable.ic_badge_fire, 300),
+        Badge("gold", "Gold", net.ljga.projects.games.tetris.R.drawable.ic_badge_gold, 500),
+        Badge("hat", "Hat", net.ljga.projects.games.tetris.R.drawable.ic_badge_hat, 300),
+        Badge("heart", "Heart", net.ljga.projects.games.tetris.R.drawable.ic_badge_heart, 300),
+        Badge("key", "Key", net.ljga.projects.games.tetris.R.drawable.ic_badge_key, 300),
+        Badge("map", "Map", net.ljga.projects.games.tetris.R.drawable.ic_badge_map, 300),
+        Badge("plant", "Plant", net.ljga.projects.games.tetris.R.drawable.ic_badge_plant, 300),
+        Badge("potion", "Potion", net.ljga.projects.games.tetris.R.drawable.ic_badge_potion, 300),
+        Badge("potion2", "Elixir", net.ljga.projects.games.tetris.R.drawable.ic_badge_potion2, 300),
+        Badge("ring", "Ring", net.ljga.projects.games.tetris.R.drawable.ic_badge_ring, 300),
+        Badge("shield", "Shield", net.ljga.projects.games.tetris.R.drawable.ic_badge_shield, 300),
+        Badge("sunmoon", "Sun & Moon", net.ljga.projects.games.tetris.R.drawable.ic_badge_sunmoon, 500),
+        Badge("sword", "Sword", net.ljga.projects.games.tetris.R.drawable.ic_badge_sword, 300),
+        Badge("wand", "Wand", net.ljga.projects.games.tetris.R.drawable.ic_badge_wand, 300)
+    )
+
     // Helper functions to reduce hook invocation duplication
     private inline fun <reified T> GameState.applyHook(transform: (T, GameState) -> GameState): GameState {
         var state = this
@@ -247,9 +281,10 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
         viewModelScope.launch {
             val isDebugMode = mutations.isNotEmpty() || artifacts.isNotEmpty()
             val startingMutations = if (isDebugMode) mutations else {
-                val unlockedMutationNames = preferenceDataStore.ownedBadges.first()
-                val unlockedMutations = allMutations.filter { unlockedMutationNames.contains(it.name) }
-                if (unlockedMutations.isNotEmpty()) listOf(unlockedMutations.random()) else emptyList()
+            val startingMutations = if (isDebugMode) mutations else {
+                val activeMutationNames = preferenceDataStore.enabledMutations.first()
+                val activeMutations = allMutations.filter { activeMutationNames.contains(it.name) }
+                if (activeMutations.isNotEmpty()) listOf(activeMutations.random()) else emptyList()
             }
 
             _gameState.value = GameState(createEmptyBoard(), null, pieces.random(), pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, artifacts, startingMutations, null, pieces.shuffled(), 0, emptyList(), 0, isDebugMode, emptyList())
@@ -534,6 +569,10 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
                 else -> 0
             } * _gameState.value.level
 
+            // Apply Mutation Modifiers
+            val multiplier = _gameState.value.selectedMutations.map { it.scoreMultiplier }.fold(1f) { acc, m -> acc * m }
+            points = (points * multiplier).toInt()
+
             for (artifact in _gameState.value.artifacts) {
                 if (artifact is IScoreModifier) {
                     points = artifact.modifyScore(points, linesCleared, _gameState.value.level)
@@ -613,11 +652,25 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
 
     fun purchaseBadge(badgeName: String, cost: Int) {
         viewModelScope.launch {
-            if (preferenceDataStore.purchaseBadge(badgeName, cost)) {
-                // Update local list of mutations if needed, or just let flows update
-                val owned = preferenceDataStore.ownedBadges.first()
-                _mutations.value = allMutations.filter { owned.contains(it.name) }
+            preferenceDataStore.purchaseBadge(badgeName, cost)
+        }
+    }
+
+    fun purchaseMutation(mutationName: String, cost: Int) {
+        viewModelScope.launch {
+            if (preferenceDataStore.purchaseMutation(mutationName, cost)) {
+                // Update local list if needed, though flows handle it
+                val enabled = preferenceDataStore.enabledMutations.first()
+                _mutations.value = allMutations.filter { enabled.contains(it.name) }
             }
+        }
+    }
+
+    fun toggleMutation(mutationName: String, enabled: Boolean) {
+        viewModelScope.launch {
+            preferenceDataStore.setMutationEnabled(mutationName, enabled)
+            val updatedEnabled = preferenceDataStore.enabledMutations.first()
+            _mutations.value = allMutations.filter { updatedEnabled.contains(it.name) }
         }
     }
 
@@ -630,8 +683,8 @@ class GameViewModel(private val preferenceDataStore: PreferenceDataStore) : View
     // private suspend fun unlockNextMutation() - REMOVED
 
     private suspend fun addRandomMutationToRun() {
-        val unlockedMutationNames = preferenceDataStore.ownedBadges.first()
-        val availableMutations = allMutations.filter { unlockedMutationNames.contains(it.name) && !_gameState.value.selectedMutations.contains(it) }
+        val activeMutationNames = preferenceDataStore.enabledMutations.first()
+        val availableMutations = allMutations.filter { activeMutationNames.contains(it.name) && !_gameState.value.selectedMutations.contains(it) }
         if (availableMutations.isNotEmpty()) {
             val newMutation = availableMutations.random()
             _gameState.value = _gameState.value.copy(selectedMutations = _gameState.value.selectedMutations + newMutation)

@@ -2,7 +2,6 @@ package net.ljga.projects.games.tetris.ui.game
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -13,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -20,7 +20,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import net.ljga.projects.games.tetris.R
 
 @Composable
@@ -30,13 +29,12 @@ fun ShopScreen(
 ) {
     val coins by viewModel.coins.collectAsState()
     val ownedBadges by viewModel.ownedBadges.collectAsState()
-    
-    val allItems = remember {
-        viewModel.allMutations + viewModel.allArtifacts
-    }
+    val unlockedMutations by viewModel.unlockedMutations.collectAsState()
+    val enabledMutations by viewModel.enabledMutations.collectAsState()
 
-    var showConfirmDialog by remember { mutableStateOf<GameMechanic?>(null) }
-    
+    var selectedTab by remember { mutableIntStateOf(0) }
+    var showConfirmDialog by remember { mutableStateOf<Any?>(null) } // Can be Mutation or Badge
+
     // Background gradient
     Box(
         modifier = Modifier
@@ -86,36 +84,56 @@ fun ShopScreen(
                 }
             }
             
-            Text(
-                text = "Badge Shop",
-                color = Color.White,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                textAlign = TextAlign.Center
-            )
+            TabRow(selectedTabIndex = selectedTab) {
+                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Mutations") })
+                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Badges") })
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Grid of Badges
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 100.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(allItems) { item ->
-                    val isOwned = ownedBadges.contains(item.name)
-                    ShopItemCard(
-                        item = item,
-                        isOwned = isOwned,
-                        cost = 500, // Fixed cost for now
-                        onItemClick = {
-                            if (!isOwned) {
-                                showConfirmDialog = item
+            if (selectedTab == 0) {
+                // Mutations Shop
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 150.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(viewModel.allMutations) { mutation ->
+                        val isUnlocked = unlockedMutations.contains(mutation.name)
+                        val isEnabled = enabledMutations.contains(mutation.name)
+                        
+                        MutationShopCard(
+                            mutation = mutation,
+                            isUnlocked = isUnlocked,
+                            isEnabled = isEnabled,
+                            onToggle = { enabled ->
+                                viewModel.toggleMutation(mutation.name, enabled)
+                            },
+                            onBuy = {
+                                showConfirmDialog = mutation
                             }
-                        }
-                    )
+                        )
+                    }
+                }
+            } else {
+                // Badges Shop
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 100.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(viewModel.allBadges) { badge ->
+                        val isOwned = ownedBadges.contains(badge.id)
+                        BadgeShopCard(
+                            badge = badge,
+                            isOwned = isOwned,
+                            onBuy = {
+                                showConfirmDialog = badge
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -123,35 +141,38 @@ fun ShopScreen(
     
     // Purchase Confirmation Dialog
     showConfirmDialog?.let { item ->
+        val isMutation = item is Mutation
+        val name = if (isMutation) (item as Mutation).name else (item as GameViewModel.Badge).name
+        val cost = if (isMutation) 500 else (item as GameViewModel.Badge).cost
+        val icon = if (isMutation) (item as Mutation).iconResId else (item as GameViewModel.Badge).iconResId
+
         AlertDialog(
             onDismissRequest = { showConfirmDialog = null },
-            title = { Text(text = "Purchase Badge?") },
+            title = { Text(text = "Purchase $name?") },
             text = {
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(
-                            painter = painterResource(id = item.iconResId),
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(text = item.name, fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(text = item.description)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Image(
+                        painter = painterResource(id = icon),
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp)
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = "Cost: 500 Coins")
+                    Text(text = "Cost: $cost Coins")
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        if (coins >= 500) {
-                            viewModel.purchaseBadge(item.name, 500)
+                        if (coins >= cost) {
+                            if (isMutation) {
+                                viewModel.purchaseMutation((item as Mutation).name, cost)
+                            } else {
+                                viewModel.purchaseBadge((item as GameViewModel.Badge).id, cost)
+                            }
                             showConfirmDialog = null
                         }
                     },
-                    enabled = coins >= 500
+                    enabled = coins >= cost
                 ) {
                     Text("Purchase")
                 }
@@ -166,17 +187,75 @@ fun ShopScreen(
 }
 
 @Composable
-fun ShopItemCard(
-    item: GameMechanic,
-    isOwned: Boolean,
-    cost: Int,
-    onItemClick: () -> Unit
+fun MutationShopCard(
+    mutation: Mutation,
+    isUnlocked: Boolean,
+    isEnabled: Boolean,
+    onToggle: (Boolean) -> Unit,
+    onBuy: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.8f) // Taller than wide
-            .clickable(enabled = !isOwned, onClick = onItemClick),
+            .clickable(enabled = !isUnlocked, onClick = onBuy),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isUnlocked) Color.DarkGray else Color.White.copy(alpha = 0.9f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(contentAlignment = Alignment.TopEnd) {
+                Image(
+                    painter = painterResource(id = mutation.iconResId),
+                    contentDescription = mutation.name,
+                    modifier = Modifier
+                        .size(64.dp)
+                        .padding(4.dp)
+                )
+                if (isUnlocked) {
+                   Switch(
+                       checked = isEnabled,
+                       onCheckedChange = onToggle,
+                       modifier = Modifier.scale(0.8f)
+                   )
+                }
+            }
+            Text(
+                text = mutation.name,
+                fontWeight = FontWeight.Bold,
+                color = if (isUnlocked) Color.White else Color.Black,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "x${mutation.scoreMultiplier}",
+                fontSize = 12.sp,
+                color = if (mutation.scoreMultiplier < 1.0f) Color.Green else Color.Red
+            )
+            if (!isUnlocked) {
+                 Text(
+                    text = "500",
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFD35400)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun BadgeShopCard(
+    badge: GameViewModel.Badge,
+    isOwned: Boolean,
+    onBuy: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(0.8f) 
+            .clickable(enabled = !isOwned, onClick = onBuy),
         colors = CardDefaults.cardColors(
             containerColor = if (isOwned) Color.DarkGray else Color.White.copy(alpha = 0.9f)
         ),
@@ -190,8 +269,8 @@ fun ShopItemCard(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Image(
-                painter = painterResource(id = item.iconResId),
-                contentDescription = item.name,
+                painter = painterResource(id = badge.iconResId),
+                contentDescription = badge.name,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
@@ -199,7 +278,7 @@ fun ShopItemCard(
             )
             
             Text(
-                text = item.name,
+                text = badge.name,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -216,9 +295,9 @@ fun ShopItemCard(
                 )
             } else {
                 Text(
-                    text = "$cost",
+                    text = "${badge.cost}",
                     fontSize = 12.sp,
-                    color = Color(0xFFD35400), // Dark orange
+                    color = Color(0xFFD35400),
                     fontWeight = FontWeight.Bold
                 )
             }

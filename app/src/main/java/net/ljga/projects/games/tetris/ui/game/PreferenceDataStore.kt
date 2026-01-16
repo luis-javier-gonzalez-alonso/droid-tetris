@@ -116,6 +116,7 @@ class PreferenceDataStore(private val context: Context) {
     private val highScoreKey = intPreferencesKey("high_score")
     private val gameStateKey = stringPreferencesKey("game_state")
     private val unlockedMutationsKey = stringSetPreferencesKey("unlocked_mutations")
+    private val enabledMutationsKey = stringSetPreferencesKey("enabled_mutations")
     private val coinsKey = intPreferencesKey("coins")
     private val ownedBadgesKey = stringSetPreferencesKey("owned_badges")
 
@@ -144,6 +145,11 @@ class PreferenceDataStore(private val context: Context) {
             preferences[unlockedMutationsKey] ?: emptySet()
         }
 
+    val enabledMutations: Flow<Set<String>> = context.dataStore.data
+        .map { preferences ->
+            preferences[enabledMutationsKey] ?: emptySet()
+        }
+
     suspend fun updateHighScore(score: Int) {
         context.dataStore.edit {
             it[highScoreKey] = score
@@ -166,7 +172,23 @@ class PreferenceDataStore(private val context: Context) {
     suspend fun unlockMutation(mutationName: String) {
         context.dataStore.edit {
             val currentMutations = it[unlockedMutationsKey] ?: emptySet()
-            it[unlockedMutationsKey] = currentMutations + mutationName
+            if (!currentMutations.contains(mutationName)) {
+                it[unlockedMutationsKey] = currentMutations + mutationName
+                // Auto-enable new mutations by default
+                val currentEnabled = it[enabledMutationsKey] ?: emptySet()
+                it[enabledMutationsKey] = currentEnabled + mutationName
+            }
+        }
+    }
+
+    suspend fun setMutationEnabled(mutationName: String, enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            val currentEnabled = prefs[enabledMutationsKey] ?: emptySet()
+            prefs[enabledMutationsKey] = if (enabled) {
+                currentEnabled + mutationName
+            } else {
+                currentEnabled - mutationName
+            }
         }
     }
 
@@ -201,6 +223,23 @@ class PreferenceDataStore(private val context: Context) {
             if (currentCoins >= cost && !ownedBadges.contains(badgeName)) {
                 prefs[coinsKey] = currentCoins - cost
                 prefs[ownedBadgesKey] = ownedBadges + badgeName
+                success = true
+            }
+        }
+        return success
+    }
+
+    suspend fun purchaseMutation(mutationName: String, cost: Int): Boolean {
+        var success = false
+        context.dataStore.edit { prefs ->
+            val currentCoins = prefs[coinsKey] ?: 0
+            val unlockedMutations = prefs[unlockedMutationsKey] ?: emptySet()
+            if (currentCoins >= cost && !unlockedMutations.contains(mutationName)) {
+                prefs[coinsKey] = currentCoins - cost
+                prefs[unlockedMutationsKey] = unlockedMutations + mutationName
+                // Auto-enable
+                val currentEnabled = prefs[enabledMutationsKey] ?: emptySet()
+                prefs[enabledMutationsKey] = currentEnabled + mutationName
                 success = true
             }
         }

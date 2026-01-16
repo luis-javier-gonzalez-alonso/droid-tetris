@@ -115,7 +115,12 @@ interface IRequiresGhostPiece : GameMechanic
  * Base class for all mutations.
  * Mutations are permanent modifiers selected at the start of a run.
  */
-abstract class Mutation(override val name: String, override val description: String, override val iconResId: Int) : GameMechanic
+abstract class Mutation(
+    override val name: String,
+    override val description: String,
+    override val iconResId: Int,
+    val scoreMultiplier: Float = 1.0f
+) : GameMechanic
 
 /**
  * Base class for all artifacts.
@@ -124,7 +129,7 @@ abstract class Mutation(override val name: String, override val description: Str
 abstract class Artifact(override val name: String, override val description: String, override val iconResId: Int) : GameMechanic
 
 
-class UnyieldingMutation : Mutation("Unyielding", "Start with one line of garbage blocks, and a new one for each level", R.drawable.ic_mutation_unyielding), IOnNewGameHook, IOnLevelUpHook {
+class UnyieldingMutation : Mutation("Unyielding", "Start with one line of garbage blocks, and a new one for each level", R.drawable.ic_mutation_unyielding, 2.0f), IOnNewGameHook, IOnLevelUpHook {
     private fun addGarbageLine(board: Array<IntArray>): Array<IntArray> {
         val newBoard = board.map { it.clone() }.toTypedArray()
         val random = Random()
@@ -153,21 +158,21 @@ class UnyieldingMutation : Mutation("Unyielding", "Start with one line of garbag
     }
 }
 
-class FeatherFallMutation : Mutation("Feather Fall", "Pieces fall 20% slower", R.drawable.ic_mutation_featherfall), ITickDelayModifier {
+class FeatherFallMutation : Mutation("Feather Fall", "Pieces fall 20% slower", R.drawable.ic_mutation_featherfall, 0.8f), ITickDelayModifier {
     override fun modifyTickDelay(delay: Long): Long {
         return (delay * 1.2).toLong()
     }
 }
 
-class LeadFallMutation : Mutation("Lead Fall", "Pieces fall 25% faster", R.drawable.ic_mutation_leadfall), ITickDelayModifier {
+class LeadFallMutation : Mutation("Lead Fall", "Pieces fall 25% faster", R.drawable.ic_mutation_leadfall, 1.25f), ITickDelayModifier {
     override fun modifyTickDelay(delay: Long): Long {
         return (delay * 0.75).toLong()
     }
 }
 
-class ClairvoyanceMutation : Mutation("Clairvoyance", "See the next two pieces instead of one", R.drawable.ic_mutation_clairvoyance)
+class ClairvoyanceMutation : Mutation("Clairvoyance", "See the next two pieces instead of one", R.drawable.ic_mutation_clairvoyance, 0.8f)
 
-class ColorblindMutation : Mutation("Colorblind", "All pieces are the same color", R.drawable.ic_mutation_colorblind), IOnPieceSpawnHook {
+class ColorblindMutation : Mutation("Colorblind", "All pieces are the same color", R.drawable.ic_mutation_colorblind, 1.5f), IOnPieceSpawnHook {
     override fun onPieceSpawn(gameState: GameViewModel.GameState): GameViewModel.GameState {
         val piece = gameState.piece ?: return gameState
         val nextPiece = gameState.nextPiece
@@ -180,7 +185,7 @@ class ColorblindMutation : Mutation("Colorblind", "All pieces are the same color
     }
 }
 
-class MoreIsMutation : Mutation("More 'I's", "Increases the frequency of 'I' pieces", R.drawable.ic_mutation_more_is), IOnPieceSpawnHook {
+class MoreIsMutation : Mutation("More 'I's", "Increases the frequency of 'I' pieces", R.drawable.ic_mutation_more_is, 0.9f), IOnPieceSpawnHook {
     override fun onPieceSpawn(gameState: GameViewModel.GameState): GameViewModel.GameState {
         if (Random().nextInt(5) == 0) {
             val iPiece = GameViewModel.pieces.first() // I-piece is first in the list
@@ -190,7 +195,7 @@ class MoreIsMutation : Mutation("More 'I's", "Increases the frequency of 'I' pie
     }
 }
 
-class GarbageCollectorMutation : Mutation("Garbage Collector", "Spawning a piece has a chance to add a garbage block", R.drawable.ic_mutation_unyielding), IOnPieceSpawnHook {
+class GarbageCollectorMutation : Mutation("Garbage Collector", "Spawning a piece has a chance to add a garbage block", R.drawable.ic_mutation_unyielding, 1.3f), IOnPieceSpawnHook {
     override fun onPieceSpawn(gameState: GameViewModel.GameState): GameViewModel.GameState {
         if (Random().nextInt(10) == 0) {
             val newBoard = gameState.board.map { it.clone() }.toTypedArray()
@@ -213,7 +218,7 @@ class GarbageCollectorMutation : Mutation("Garbage Collector", "Spawning a piece
     }
 }
 
-class TimeWarpMutation : Mutation("Time Warp", "Clearing a line has a 10% chance to freeze the game for 2 seconds", R.drawable.ic_mutation_unyielding), IOnLineClearHook {
+class TimeWarpMutation : Mutation("Time Warp", "Clearing a line has a 10% chance to freeze the game for 2 seconds", R.drawable.ic_mutation_unyielding, 0.9f), IOnLineClearHook {
     override suspend fun onLineClear(gameState: GameViewModel.GameState, linesCleared: Int): GameViewModel.GameState {
         if (linesCleared > 0 && Random().nextInt(10) == 0) {
             kotlinx.coroutines.delay(2000)
@@ -222,7 +227,7 @@ class TimeWarpMutation : Mutation("Time Warp", "Clearing a line has a 10% chance
     }
 }
 
-class FairPlayMutation : Mutation("Fair Play", "All 7 unique pieces will spawn before any are repeated", R.drawable.ic_mutation_unyielding), IOnPieceSpawnHook {
+class FairPlayMutation : Mutation("Fair Play", "All 7 unique pieces will spawn before any are repeated", R.drawable.ic_mutation_unyielding, 0.8f), IOnPieceSpawnHook {
     override fun onPieceSpawn(gameState: GameViewModel.GameState): GameViewModel.GameState {
         var queue = gameState.pieceQueue
         if (queue.isEmpty()) {
@@ -251,7 +256,7 @@ class FairPlayMutation : Mutation("Fair Play", "All 7 unique pieces will spawn b
     }
 }
 
-class PhantomPieceMutation : Mutation("Phantom Piece", "Shows a ghost of where the current piece will land", R.drawable.ic_mutation_unyielding), IRequiresGhostPiece
+class PhantomPieceMutation : Mutation("Phantom Piece", "Shows a ghost of where the current piece will land", R.drawable.ic_mutation_unyielding, 0.7f), IRequiresGhostPiece
 
 // Artifacts
 
