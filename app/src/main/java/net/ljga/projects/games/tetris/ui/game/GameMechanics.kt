@@ -70,7 +70,7 @@ interface IScoreModifier : GameMechanic {
  * Return null to fall through to default rotation, or a new state to override.
  */
 interface IRotationOverride : GameMechanic {
-    fun onRotate(gameState: GameViewModel.GameState): GameViewModel.GameState?
+    fun onRotate(gameState: GameViewModel.GameState, gameViewModel: GameViewModel): GameViewModel.GameState?
 }
 
 /**
@@ -291,7 +291,7 @@ class SpringLoadedRotatorArtifact : Artifact("Spring-loaded Rotator", "Rotating 
 }
 
 class ChaosOrbArtifact : Artifact("Chaos Orb", "Rotating changes the piece type", R.drawable.ic_mutation_unyielding), IRotationOverride {
-    override fun onRotate(gameState: GameViewModel.GameState): GameViewModel.GameState {
+    override fun onRotate(gameState: GameViewModel.GameState, gameViewModel: GameViewModel): GameViewModel.GameState {
         val newPiece = GameViewModel.pieces.random()
         var rotatedShape = newPiece.shape
         val numRotations = Random().nextInt(4)
@@ -306,7 +306,7 @@ class ChaosOrbArtifact : Artifact("Chaos Orb", "Rotating changes the piece type"
         }
         val finalNewPiece = GameViewModel.Piece(rotatedShape, newPiece.color)
 
-        return if (GameViewModel.isValidPosition(gameState.pieceX, gameState.pieceY, finalNewPiece, gameState.board)) {
+        return if (gameViewModel.isValidPosition(gameState.pieceX, gameState.pieceY, finalNewPiece, gameState.board)) {
             gameState.copy(piece = finalNewPiece)
         } else {
             gameState
@@ -348,7 +348,7 @@ class InvertedRotationArtifact : Artifact("Inverted Rotation", "Inverts the rota
 }
 
 class PieceSwapperArtifact : Artifact("Piece Swapper", "Swap the current piece with the next piece by rotating twice", R.drawable.ic_mutation_unyielding), IRotationOverride {
-    override fun onRotate(gameState: GameViewModel.GameState): GameViewModel.GameState? {
+    override fun onRotate(gameState: GameViewModel.GameState, gameViewModel: GameViewModel): GameViewModel.GameState? {
         if (gameState.rotationCount >= 2) {
             return gameState.copy(
                 piece = gameState.nextPiece,

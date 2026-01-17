@@ -58,6 +58,7 @@ class BadgeWidgetConfigActivity : ComponentActivity() {
         }
 
         val preferenceDataStore = PreferenceDataStore(applicationContext)
+        val gameViewModel = GameViewModel(preferenceDataStore) // Create instance here
 
         setContent {
             val ownedBadges by preferenceDataStore.ownedBadges.collectAsState(initial = emptySet())
@@ -81,7 +82,7 @@ class BadgeWidgetConfigActivity : ComponentActivity() {
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(GameViewModel.allBadges.filter { ownedBadges.contains(it.id) }) { badge ->
+                    items(gameViewModel.allBadges.filter { ownedBadges.contains(it.id) }) { badge ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()

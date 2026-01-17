@@ -34,7 +34,7 @@ import androidx.core.view.WindowCompat
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
 import net.ljga.projects.games.tetris.ui.game.GameViewModel
-import net.ljga.projects.games.tetris.ui.game.GameViewModel.GameViewModelFactory
+import net.ljga.projects.games.tetris.ui.game.GameViewModelFactory
 import net.ljga.projects.games.tetris.ui.game.PreferenceDataStore
 import net.ljga.projects.games.tetris.ui.theme.MyApplicationTheme
 

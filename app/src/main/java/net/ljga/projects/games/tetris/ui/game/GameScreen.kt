@@ -1,3 +1,4 @@
+
 package net.ljga.projects.games.tetris.ui.game
 
 import androidx.compose.foundation.Canvas
@@ -67,8 +68,8 @@ fun GameScreen(
     if (gameState.artifactChoices.isNotEmpty()) {
         ArtifactSelectionDialog(
             choices = gameState.artifactChoices,
-            onSelect = { artifact ->
-                gameViewModel.selectArtifact(artifact)
+            onSelect = {
+                gameViewModel.selectArtifact(it)
             }
         )
     }
@@ -155,23 +156,20 @@ fun GameScreen(
                                     accumulatedDragX += dragAmount.x
                                     accumulatedDragY += dragAmount.y
 
-                                    val squareSizeWidth =
-                                        (size.width / 4) / gameViewModel.boardWidth.toFloat()
-                                    val squareSizeHeight =
-                                        (size.height / 4) / gameViewModel.boardHeight.toFloat()
+                                    val squareSizeWidth = size.width / gameViewModel.boardWidth
+                                    val squareSizeHeight = size.height / gameViewModel.boardHeight
 
-                                    if (accumulatedDragX > squareSizeWidth) {
+                                    if (accumulatedDragX > squareSizeWidth * 0.7) {
                                         gameViewModel.moveRight()
-                                        accumulatedDragX -= squareSizeWidth
-                                    } else if (accumulatedDragX < -squareSizeWidth) {
+                                        accumulatedDragX = 0f
+                                    } else if (accumulatedDragX < -squareSizeWidth * 0.7) {
                                         gameViewModel.moveLeft()
-                                        accumulatedDragX += squareSizeWidth
+                                        accumulatedDragX = 0f
                                     }
 
-                                    if (accumulatedDragY > squareSizeHeight) {
+                                    if (accumulatedDragY > squareSizeHeight * 0.7) {
                                         gameViewModel.moveDown()
-                                        accumulatedDragX = 0f
-                                        accumulatedDragY -= squareSizeHeight
+                                        accumulatedDragY = 0f
                                     }
                                 }
                             )
@@ -192,14 +190,12 @@ fun GameScreen(
                     )
 
                     gameState.nextPiece?.let {
-                        val startX = gameViewModel.boardWidth / 2 - it.shape[0].size / 2
-                        drawPiece(it, startX, 0, squareSize, boardPadding, alpha = 0.3f)
+                        drawPiece(it, gameViewModel.boardWidth / 2 - it.shape[0].size / 2, 0, squareSize, boardPadding, alpha = 0.3f)
                     }
 
                     if (gameState.selectedMutations.any { it is ClairvoyanceMutation }) {
                         gameState.secondNextPiece?.let {
-                            val startX = gameViewModel.boardWidth / 2 - it.shape[0].size / 2
-                            drawPiece(it, startX, 4, squareSize, boardPadding, alpha = 0.15f)
+                            drawPiece(it, gameViewModel.boardWidth / 2 - it.shape[0].size / 2, 4, squareSize, boardPadding, alpha = 0.15f)
                         }
                     }
 
@@ -311,9 +307,6 @@ fun MutationPopup(
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        // Transparent background click to dismiss is handled by Dialog if we don't consume it?
-        // But user wants "tap screen".
-        // We'll make the surface clickable.
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -335,7 +328,7 @@ fun MutationPopup(
                     modifier = Modifier.size(96.dp)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(mechanic.name, style = androidx.compose.material3.MaterialTheme.typography.titleLarge)//, androidx.compose.ui.text.font.FontWeight.Bold)
+                Text(mechanic.name, style = androidx.compose.material3.MaterialTheme.typography.titleLarge)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(mechanic.description, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 Spacer(modifier = Modifier.height(24.dp))
