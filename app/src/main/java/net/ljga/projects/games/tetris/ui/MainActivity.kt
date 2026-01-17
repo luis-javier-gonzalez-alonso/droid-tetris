@@ -20,19 +20,23 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.core.os.LocaleListCompat
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.lifecycleScope
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import net.ljga.projects.games.tetris.ui.game.GameViewModel
 import net.ljga.projects.games.tetris.ui.game.GameViewModelFactory
 import net.ljga.projects.games.tetris.ui.game.PreferenceDataStore
@@ -51,14 +55,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        androidx.lifecycle.lifecycleScope.launchWhenCreated {
+        lifecycleScope.launch {
             gameViewModel.preferenceDataStore.languageCode.collect { code ->
                 val localeList = if (code == "system") {
-                    androidx.core.os.LocaleListCompat.getEmptyLocaleList()
+                    LocaleListCompat.getEmptyLocaleList()
                 } else {
-                    androidx.core.os.LocaleListCompat.forLanguageTags(code)
+                    LocaleListCompat.forLanguageTags(code)
                 }
-                androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(localeList)
+                AppCompatDelegate.setApplicationLocales(localeList)
             }
         }
 

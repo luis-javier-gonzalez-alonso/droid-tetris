@@ -116,6 +116,7 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.material.icons.extended)
     implementation("com.google.accompanist:accompanist-systemuicontroller:0.28.0")
     // Tooling
     debugImplementation(libs.androidx.compose.ui.tooling)
