@@ -18,6 +18,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -106,37 +107,11 @@ fun GameScreen(
             )
         }
 
-        Row(modifier = Modifier.fillMaxSize()) {
-            // Left Column: Artifacts (Glassmorphism)
-            Column(
-                modifier = Modifier
-                    .width(72.dp)
-                    .fillMaxHeight()
-                    .background(Color.Black.copy(alpha = 0.3f))
-                    .padding(vertical = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                gameState.artifacts.forEach { artifact ->
-                    Card(
-                        shape = RoundedCornerShape(8.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.Cyan.copy(alpha = 0.5f))
-                    ) {
-                        Image(
-                            painter = painterResource(id = artifact.iconResId),
-                            contentDescription = artifact.name,
-                            modifier = Modifier.size(48.dp).padding(4.dp)
-                        )
-                    }
-                }
-            }
-
+        Box(modifier = Modifier.fillMaxSize()) {
             // Center: Game Board and Info
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
+                    .fillMaxSize()
             ) {
                 // Info Bar
                 Row(
@@ -254,28 +229,45 @@ fun GameScreen(
                 }
             }
 
-            // Right Column: Mutations (Glassmorphism)
+            // Left Column: Artifacts
             Column(
                 modifier = Modifier
-                    .width(72.dp)
                     .fillMaxHeight()
-                    .background(Color.Black.copy(alpha = 0.3f))
-                    .padding(vertical = 16.dp),
+                    .width(64.dp)
+                    .padding(start = 8.dp, top = 16.dp, bottom = 16.dp)
+                    .align(Alignment.CenterStart),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                gameState.artifacts.forEach { artifact ->
+                    Image(
+                        painter = painterResource(id = artifact.iconResId),
+                        contentDescription = artifact.name,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .graphicsLayer(alpha = 0.8f)
+                    )
+                }
+            }
+
+            // Right Column: Mutations
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(64.dp)
+                    .padding(end = 8.dp, top = 16.dp, bottom = 16.dp)
+                    .align(Alignment.CenterEnd),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 gameState.selectedMutations.forEach { mutation ->
-                    Card(
-                        shape = RoundedCornerShape(8.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.1f)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1C40F).copy(alpha = 0.5f))
-                    ) {
-                        Image(
-                            painter = painterResource(id = mutation.iconResId),
-                            contentDescription = mutation.name,
-                            modifier = Modifier.size(48.dp).padding(4.dp)
-                        )
-                    }
+                    Image(
+                        painter = painterResource(id = mutation.iconResId),
+                        contentDescription = mutation.name,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .graphicsLayer(alpha = 0.8f)
+                    )
                 }
             }
         }

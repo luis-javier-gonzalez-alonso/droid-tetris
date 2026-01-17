@@ -14,3 +14,4 @@
 .externalNativeBuild
 .cxx
 local.properties
+/Google-Pixel-8a-*.logcat
