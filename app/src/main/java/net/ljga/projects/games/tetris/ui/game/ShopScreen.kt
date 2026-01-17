@@ -2,6 +2,7 @@ package net.ljga.projects.games.tetris.ui.game
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -9,6 +10,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,17 +35,18 @@ fun ShopScreen(
     val enabledMutations by viewModel.enabledMutations.collectAsState()
 
     var selectedTab by remember { mutableIntStateOf(0) }
-    var showConfirmDialog by remember { mutableStateOf<Any?>(null) } // Can be Mutation or Badge
+    var showConfirmDialog by remember { mutableStateOf<Any?>(null) }
 
-    // Background gradient
+    // Dark Background Gradient
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF2C3E50),
-                        Color(0xFF4CA1AF)
+                        Color(0xFF0F2027),
+                        Color(0xFF203A43),
+                        Color(0xFF2C5364)
                     )
                 )
             )
@@ -61,21 +64,32 @@ fun ShopScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(onClick = onBack) {
+                Button(
+                    onClick = onBack,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE74C3C)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
                     Text("Back")
                 }
                 
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = Color.Black.copy(alpha = 0.5f),
+                    color = Color.Black.copy(alpha = 0.6f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF4CA1AF)),
                     modifier = Modifier.padding(8.dp)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_badge_coin),
+                            contentDescription = "Coins",
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Coins: $coins",
+                            text = "$coins",
                             color = Color(0xFFFFD700),
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
@@ -84,9 +98,28 @@ fun ShopScreen(
                 }
             }
             
-            TabRow(selectedTabIndex = selectedTab) {
-                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Mutations") })
-                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Badges") })
+            // Styled Tabs
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = Color.Transparent,
+                contentColor = Color.Cyan,
+                indicator = { tabPositions ->
+                    TabRowDefaults.SecondaryIndicator(
+                        Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                        color = Color(0xFF00E5FF)
+                    )
+                }
+            ) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text("Mutations", color = if (selectedTab == 0) Color.White else Color.Gray, fontWeight = FontWeight.Bold) }
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = { Text("Badges", color = if (selectedTab == 1) Color.White else Color.Gray, fontWeight = FontWeight.Bold) }
+                )
             }
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -95,8 +128,8 @@ fun ShopScreen(
                 // Mutations Shop
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 150.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(viewModel.allMutations) { mutation ->
@@ -120,8 +153,8 @@ fun ShopScreen(
                 // Badges Shop
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 100.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(viewModel.allBadges) { badge ->
@@ -148,6 +181,9 @@ fun ShopScreen(
 
         AlertDialog(
             onDismissRequest = { showConfirmDialog = null },
+            containerColor = Color(0xFF2C3E50),
+            titleContentColor = Color.White,
+            textContentColor = Color.White,
             title = { Text(text = "Purchase $name?") },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -157,7 +193,7 @@ fun ShopScreen(
                         modifier = Modifier.size(64.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = "Cost: $cost Coins")
+                    Text(text = "Cost: $cost Coins", fontSize = 18.sp, color = Color(0xFFFFD700))
                 }
             },
             confirmButton = {
@@ -172,14 +208,15 @@ fun ShopScreen(
                             showConfirmDialog = null
                         }
                     },
-                    enabled = coins >= cost
+                    enabled = coins >= cost,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF27AE60))
                 ) {
                     Text("Purchase")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showConfirmDialog = null }) {
-                    Text("Cancel")
+                    Text("Cancel", color = Color.Gray)
                 }
             }
         )
@@ -199,46 +236,56 @@ fun MutationShopCard(
             .fillMaxWidth()
             .clickable(enabled = !isUnlocked, onClick = onBuy),
         colors = CardDefaults.cardColors(
-            containerColor = if (isUnlocked) Color.DarkGray else Color.White.copy(alpha = 0.9f)
+            containerColor = if (isUnlocked) Color(0xFF1A1A1A) else Color(0xFF2C3E50).copy(alpha = 0.8f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (isUnlocked && isEnabled) Color(0xFF00E5FF) else if (isUnlocked) Color.Gray else Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Column(
-            modifier = Modifier.padding(8.dp),
+            modifier = Modifier.padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(contentAlignment = Alignment.TopEnd) {
+            Box(contentAlignment = Alignment.TopEnd, modifier = Modifier.fillMaxWidth()) {
                 Image(
                     painter = painterResource(id = mutation.iconResId),
                     contentDescription = mutation.name,
                     modifier = Modifier
                         .size(64.dp)
-                        .padding(4.dp)
+                        .align(Alignment.Center)
                 )
                 if (isUnlocked) {
                    Switch(
                        checked = isEnabled,
                        onCheckedChange = onToggle,
-                       modifier = Modifier.scale(0.8f)
+                       modifier = Modifier.scale(0.7f).align(Alignment.TopEnd),
+                       colors = SwitchDefaults.colors(
+                           checkedThumbColor = Color(0xFF00E5FF),
+                           checkedTrackColor = Color(0xFF004D40)
+                       )
                    )
                 }
             }
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = mutation.name,
                 fontWeight = FontWeight.Bold,
-                color = if (isUnlocked) Color.White else Color.Black,
-                textAlign = TextAlign.Center
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                fontSize = 14.sp,
+                minLines = 2
             )
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "x${mutation.scoreMultiplier}",
                 fontSize = 12.sp,
-                color = if (mutation.scoreMultiplier < 1.0f) Color.Green else Color.Red
+                color = if (mutation.scoreMultiplier < 1.0f) Color(0xFF2ECC71) else Color(0xFFE74C3C)
             )
             if (!isUnlocked) {
+                 Spacer(modifier = Modifier.height(4.dp))
                  Text(
                     text = "500",
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFD35400)
+                    color = Color(0xFFFFD700)
                 )
             }
         }
@@ -254,17 +301,17 @@ fun BadgeShopCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.8f) 
             .clickable(enabled = !isOwned, onClick = onBuy),
         colors = CardDefaults.cardColors(
-            containerColor = if (isOwned) Color.DarkGray else Color.White.copy(alpha = 0.9f)
+            containerColor = if (isOwned) Color(0xFF1A1A1A) else Color(0xFF2C3E50).copy(alpha = 0.8f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (isOwned) Color.Green else Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
+                .padding(8.dp)
+                .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
@@ -272,32 +319,31 @@ fun BadgeShopCard(
                 painter = painterResource(id = badge.iconResId),
                 contentDescription = badge.name,
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
+                    .size(64.dp)
                     .padding(4.dp)
             )
-            
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = badge.name,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
-                color = if (isOwned) Color.LightGray else Color.Black
+                color = Color.White
             )
-            
+            Spacer(modifier = Modifier.height(4.dp))
             if (isOwned) {
                 Text(
                     text = "OWNED",
                     fontSize = 10.sp,
-                    color = Color.Green,
+                    color = Color(0xFF2ECC71),
                     fontWeight = FontWeight.Bold
                 )
             } else {
                 Text(
                     text = "${badge.cost}",
                     fontSize = 12.sp,
-                    color = Color(0xFFD35400),
+                    color = Color(0xFFFFD700),
                     fontWeight = FontWeight.Bold
                 )
             }
