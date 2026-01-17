@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -69,7 +70,7 @@ fun ShopScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE74C3C)),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Back")
+                    Text(stringResource(R.string.back))
                 }
                 
                 Surface(
@@ -113,12 +114,12 @@ fun ShopScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
-                    text = { Text("Mutations", color = if (selectedTab == 0) Color.White else Color.Gray, fontWeight = FontWeight.Bold) }
+                    text = { Text(stringResource(R.string.tab_mutations), color = if (selectedTab == 0) Color.White else Color.Gray, fontWeight = FontWeight.Bold) }
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("Badges", color = if (selectedTab == 1) Color.White else Color.Gray, fontWeight = FontWeight.Bold) }
+                    text = { Text(stringResource(R.string.tab_badges), color = if (selectedTab == 1) Color.White else Color.Gray, fontWeight = FontWeight.Bold) }
                 )
             }
             
@@ -175,7 +176,7 @@ fun ShopScreen(
     // Purchase Confirmation Dialog
     showConfirmDialog?.let { item ->
         val isMutation = item is Mutation
-        val name = if (isMutation) (item as Mutation).name else (item as GameViewModel.Badge).name
+        val nameResId = if (isMutation) (item as Mutation).titleResId else (item as GameViewModel.Badge).nameResId
         val cost = if (isMutation) 500 else (item as GameViewModel.Badge).cost
         val icon = if (isMutation) (item as Mutation).iconResId else (item as GameViewModel.Badge).iconResId
 
@@ -184,7 +185,7 @@ fun ShopScreen(
             containerColor = Color(0xFF2C3E50),
             titleContentColor = Color.White,
             textContentColor = Color.White,
-            title = { Text(text = "Purchase $name?") },
+            title = { Text(text = stringResource(R.string.purchase_confirm_title, stringResource(nameResId))) },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Image(
@@ -193,7 +194,7 @@ fun ShopScreen(
                         modifier = Modifier.size(64.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = "Cost: $cost Coins", fontSize = 18.sp, color = Color(0xFFFFD700))
+                    Text(text = stringResource(R.string.cost_format, cost), fontSize = 18.sp, color = Color(0xFFFFD700))
                 }
             },
             confirmButton = {
@@ -211,12 +212,12 @@ fun ShopScreen(
                     enabled = coins >= cost,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF27AE60))
                 ) {
-                    Text("Purchase")
+                    Text(stringResource(R.string.purchase_button))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showConfirmDialog = null }) {
-                    Text("Cancel", color = Color.Gray)
+                    Text(stringResource(R.string.cancel_button), color = Color.Gray)
                 }
             }
         )
@@ -248,7 +249,7 @@ fun MutationShopCard(
             Box(contentAlignment = Alignment.TopEnd, modifier = Modifier.fillMaxWidth()) {
                 Image(
                     painter = painterResource(id = mutation.iconResId),
-                    contentDescription = mutation.name,
+                    contentDescription = stringResource(mutation.titleResId),
                     modifier = Modifier
                         .size(64.dp)
                         .align(Alignment.Center)
@@ -267,7 +268,7 @@ fun MutationShopCard(
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = mutation.name,
+                text = stringResource(mutation.titleResId),
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 textAlign = TextAlign.Center,
@@ -317,14 +318,14 @@ fun BadgeShopCard(
         ) {
             Image(
                 painter = painterResource(id = badge.iconResId),
-                contentDescription = badge.name,
+                contentDescription = stringResource(badge.nameResId),
                 modifier = Modifier
                     .size(64.dp)
                     .padding(4.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = badge.name,
+                text = stringResource(badge.nameResId),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -334,7 +335,7 @@ fun BadgeShopCard(
             Spacer(modifier = Modifier.height(4.dp))
             if (isOwned) {
                 Text(
-                    text = "OWNED",
+                    text = stringResource(R.string.owned),
                     fontSize = 10.sp,
                     color = Color(0xFF2ECC71),
                     fontWeight = FontWeight.Bold

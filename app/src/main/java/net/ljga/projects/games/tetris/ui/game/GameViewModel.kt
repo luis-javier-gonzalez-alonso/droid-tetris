@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.map
+import net.ljga.projects.games.tetris.R
 import java.util.Locale
 
 private const val TAG = "GameViewModel"
@@ -163,9 +164,9 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
         }
     }
 
-    data class Boss(val name: String, var requiredLines: Int)
+    data class Boss(val name: String, val nameResId: Int, var requiredLines: Int)
 
-    data class Badge(val id: String, val name: String, val iconResId: Int, val cost: Int)
+    data class Badge(val id: String, val name: String, val nameResId: Int, val iconResId: Int, val cost: Int)
 
     companion object {
         val pieces = listOf(
@@ -206,30 +207,30 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
     )
 
     val allBadges = listOf(
-        Badge("axe", "Axe", net.ljga.projects.games.tetris.R.drawable.ic_badge_axe, 300),
-        Badge("bomb", "Bomb", net.ljga.projects.games.tetris.R.drawable.ic_badge_bomb, 300),
-        Badge("book", "Book", net.ljga.projects.games.tetris.R.drawable.ic_badge_book, 300),
-        Badge("boots", "Boots", net.ljga.projects.games.tetris.R.drawable.ic_badge_boots, 300),
-        Badge("bulb", "Bulb", net.ljga.projects.games.tetris.R.drawable.ic_badge_bulb, 300),
-        Badge("cat", "Cat", net.ljga.projects.games.tetris.R.drawable.ic_badge_cat, 300),
-        Badge("chest", "Chest", net.ljga.projects.games.tetris.R.drawable.ic_badge_chest, 500),
-        Badge("coin", "Coin", net.ljga.projects.games.tetris.R.drawable.ic_badge_coin, 300),
-        Badge("dog", "Dog", net.ljga.projects.games.tetris.R.drawable.ic_badge_dog, 300),
-        Badge("feather", "Feather", net.ljga.projects.games.tetris.R.drawable.ic_badge_feather, 300),
-        Badge("fire", "Fire", net.ljga.projects.games.tetris.R.drawable.ic_badge_fire, 300),
-        Badge("gold", "Gold", net.ljga.projects.games.tetris.R.drawable.ic_badge_gold, 500),
-        Badge("hat", "Hat", net.ljga.projects.games.tetris.R.drawable.ic_badge_hat, 300),
-        Badge("heart", "Heart", net.ljga.projects.games.tetris.R.drawable.ic_badge_heart, 300),
-        Badge("key", "Key", net.ljga.projects.games.tetris.R.drawable.ic_badge_key, 300),
-        Badge("map", "Map", net.ljga.projects.games.tetris.R.drawable.ic_badge_map, 300),
-        Badge("plant", "Plant", net.ljga.projects.games.tetris.R.drawable.ic_badge_plant, 300),
-        Badge("potion", "Potion", net.ljga.projects.games.tetris.R.drawable.ic_badge_potion, 300),
-        Badge("potion2", "Elixir", net.ljga.projects.games.tetris.R.drawable.ic_badge_potion2, 300),
-        Badge("ring", "Ring", net.ljga.projects.games.tetris.R.drawable.ic_badge_ring, 300),
-        Badge("shield", "Shield", net.ljga.projects.games.tetris.R.drawable.ic_badge_shield, 300),
-        Badge("sunmoon", "Sun & Moon", net.ljga.projects.games.tetris.R.drawable.ic_badge_sunmoon, 500),
-        Badge("sword", "Sword", net.ljga.projects.games.tetris.R.drawable.ic_badge_sword, 300),
-        Badge("wand", "Wand", net.ljga.projects.games.tetris.R.drawable.ic_badge_wand, 300)
+        Badge("axe", "Axe", R.string.badge_axe, R.drawable.ic_badge_axe, 300),
+        Badge("bomb", "Bomb", R.string.badge_bomb, R.drawable.ic_badge_bomb, 300),
+        Badge("book", "Book", R.string.badge_book, R.drawable.ic_badge_book, 300),
+        Badge("boots", "Boots", R.string.badge_boots, R.drawable.ic_badge_boots, 300),
+        Badge("bulb", "Bulb", R.string.badge_bulb, R.drawable.ic_badge_bulb, 300),
+        Badge("cat", "Cat", R.string.badge_cat, R.drawable.ic_badge_cat, 300),
+        Badge("chest", "Chest", R.string.badge_chest, R.drawable.ic_badge_chest, 500),
+        Badge("coin", "Coin", R.string.badge_coin, R.drawable.ic_badge_coin, 300),
+        Badge("dog", "Dog", R.string.badge_dog, R.drawable.ic_badge_dog, 300),
+        Badge("feather", "Feather", R.string.badge_feather, R.drawable.ic_badge_feather, 300),
+        Badge("fire", "Fire", R.string.badge_fire, R.drawable.ic_badge_fire, 300),
+        Badge("gold", "Gold", R.string.badge_gold, R.drawable.ic_badge_gold, 500),
+        Badge("hat", "Hat", R.string.badge_hat, R.drawable.ic_badge_hat, 300),
+        Badge("heart", "Heart", R.string.badge_heart, R.drawable.ic_badge_heart, 300),
+        Badge("key", "Key", R.string.badge_key, R.drawable.ic_badge_key, 300),
+        Badge("map", "Map", R.string.badge_map, R.drawable.ic_badge_map, 300),
+        Badge("plant", "Plant", R.string.badge_plant, R.drawable.ic_badge_plant, 300),
+        Badge("potion", "Potion", R.string.badge_potion, R.drawable.ic_badge_potion, 300),
+        Badge("potion2", "Elixir", R.string.badge_elixir, R.drawable.ic_badge_potion2, 300),
+        Badge("ring", "Ring", R.string.badge_ring, R.drawable.ic_badge_ring, 300),
+        Badge("shield", "Shield", R.string.badge_shield, R.drawable.ic_badge_shield, 300),
+        Badge("sunmoon", "Sun & Moon", R.string.badge_sun_moon, R.drawable.ic_badge_sunmoon, 500),
+        Badge("sword", "Sword", R.string.badge_sword, R.drawable.ic_badge_sword, 300),
+        Badge("wand", "Wand", R.string.badge_wand, R.drawable.ic_badge_wand, 300)
     )
 
     // Helper functions to reduce hook invocation duplication
@@ -251,8 +252,8 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
     }
 
     val bosses = listOf(
-        Boss("The Wall", 10),
-        Boss("The Sprinter", 15)
+        Boss("The Wall", R.string.boss_wall, 10),
+        Boss("The Sprinter", R.string.boss_sprinter, 15)
     )
 
     fun newGame() {

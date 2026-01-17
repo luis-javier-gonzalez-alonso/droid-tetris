@@ -39,4 +39,78 @@
     <string name="boss_label">Boss: %s</string>
     <string name="new_power_title">New Power Acquired!</string>
     <string name="tap_continue">Tap anywhere to continue</string>
+
+    <!-- Mutations -->
+    <string name="mut_unyielding_title">Unyielding</string>
+    <string name="mut_unyielding_desc">Start with one line of garbage blocks, and a new one for each level</string>
+    <string name="mut_feather_fall_title">Feather Fall</string>
+    <string name="mut_feather_fall_desc">Pieces fall 20% slower</string>
+    <string name="mut_lead_fall_title">Lead Fall</string>
+    <string name="mut_lead_fall_desc">Pieces fall 25% faster</string>
+    <string name="mut_clairvoyance_title">Clairvoyance</string>
+    <string name="mut_clairvoyance_desc">See the next two pieces instead of one</string>
+    <string name="mut_colorblind_title">Colorblind</string>
+    <string name="mut_colorblind_desc">All pieces are the same color</string>
+    <string name="mut_more_is_title">More \'I\'s</string>
+    <string name="mut_more_is_desc">Increases the frequency of \'I\' pieces</string>
+    <string name="mut_garbage_collector_title">Garbage Collector</string>
+    <string name="mut_garbage_collector_desc">Spawning a piece has a chance to add a garbage block</string>
+    <string name="mut_time_warp_title">Time Warp</string>
+    <string name="mut_time_warp_desc">Clearing a line has a 10% chance to freeze the game for 2 seconds</string>
+    <string name="mut_fair_play_title">Fair Play</string>
+    <string name="mut_fair_play_desc">All 7 unique pieces will spawn before any are repeated</string>
+    <string name="mut_phantom_piece_title">Phantom Piece</string>
+    <string name="mut_phantom_piece_desc">Shows a ghost of where the current piece will land</string>
+
+    <!-- Artifacts -->
+    <string name="art_swiftness_charm_title">Swiftness Charm</string>
+    <string name="art_swiftness_charm_desc">Increases piece drop speed by 10%</string>
+    <string name="art_line_clearer_title">Line Clearer</string>
+    <string name="art_line_clearer_desc">Clears an extra line randomly</string>
+    <string name="art_score_multiplier_title">Score Multiplier</string>
+    <string name="art_score_multiplier_desc">Multiplies score from line clears by 1.5x</string>
+    <string name="art_spring_loaded_title">Spring-loaded Rotator</string>
+    <string name="art_spring_loaded_desc">Rotating moves the piece up one space</string>
+    <string name="art_chaos_orb_title">Chaos Orb</string>
+    <string name="art_chaos_orb_desc">Rotating changes the piece type</string>
+    <string name="art_falling_fragments_title">Falling Fragments</string>
+    <string name="art_falling_fragments_desc">When completing 2 or 4 lines, 2 single-square pieces drop from the top in random positions.</string>
+    <string name="art_board_wipe_title">Board Wipe</string>
+    <string name="art_board_wipe_desc">Single-use: Clearing 3 lines at the same time clears the entire board.</string>
+    <string name="art_inverted_rotation_title">Inverted Rotation</string>
+    <string name="art_inverted_rotation_desc">Inverts the rotation direction of pieces</string>
+    <string name="art_piece_swapper_title">Piece Swapper</string>
+    <string name="art_piece_swapper_desc">Swap the current piece with the next piece by rotating twice</string>
+    <string name="art_board_shrinker_title">Board Shrinker</string>
+    <string name="art_board_shrinker_desc">Reduces the board width by 2 columns</string>
+
+    <!-- Badges -->
+    <string name="badge_axe">Axe</string>
+    <string name="badge_bomb">Bomb</string>
+    <string name="badge_book">Book</string>
+    <string name="badge_boots">Boots</string>
+    <string name="badge_bulb">Bulb</string>
+    <string name="badge_cat">Cat</string>
+    <string name="badge_chest">Chest</string>
+    <string name="badge_coin">Coin</string>
+    <string name="badge_dog">Dog</string>
+    <string name="badge_feather">Feather</string>
+    <string name="badge_fire">Fire</string>
+    <string name="badge_gold">Gold</string>
+    <string name="badge_hat">Hat</string>
+    <string name="badge_heart">Heart</string>
+    <string name="badge_key">Key</string>
+    <string name="badge_map">Map</string>
+    <string name="badge_plant">Plant</string>
+    <string name="badge_potion">Potion</string>
+    <string name="badge_elixir">Elixir</string>
+    <string name="badge_ring">Ring</string>
+    <string name="badge_shield">Shield</string>
+    <string name="badge_sun_moon">Sun &amp; Moon</string>
+    <string name="badge_sword">Sword</string>
+    <string name="badge_wand">Wand</string>
+
+    <!-- Bosses -->
+    <string name="boss_wall">The Wall</string>
+    <string name="boss_sprinter">The Sprinter</string>
 </resources>

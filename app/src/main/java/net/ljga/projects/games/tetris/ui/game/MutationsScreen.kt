@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
@@ -27,8 +28,8 @@ fun MutationsScreen(
             Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                 Row(modifier = Modifier.padding(16.dp)) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = mutation.name)
-                        Text(text = mutation.description)
+                        Text(text = stringResource(mutation.titleResId))
+                        Text(text = stringResource(mutation.descResId))
                     }
                     if (unlockedMutations.contains(mutation)) {
                         Text("Unlocked")

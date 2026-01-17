@@ -21,12 +21,14 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import net.ljga.projects.games.tetris.R.*
 
 @Composable
 fun GameScreen(
@@ -71,9 +73,9 @@ fun GameScreen(
                         modifier = Modifier.padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("GAME OVER", style = MaterialTheme.typography.headlineMedium, color = Color(0xFFE74C3C), fontWeight = FontWeight.Bold)
+                        Text(stringResource(string.game_over), style = MaterialTheme.typography.headlineMedium, color = Color(0xFFE74C3C), fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text("Your score: ${gameState.currentScore}", style = MaterialTheme.typography.bodyLarge, color = Color.White)
+                        Text(stringResource(string.your_score, gameState.currentScore), style = MaterialTheme.typography.bodyLarge, color = Color.White)
                         Spacer(modifier = Modifier.height(24.dp))
                         Button(
                             onClick = {
@@ -82,7 +84,7 @@ fun GameScreen(
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3498DB))
                         ) {
-                            Text("New Game", color = Color.White)
+                            Text(stringResource(string.new_game), color = Color.White)
                         }
                     }
                 }
@@ -121,8 +123,8 @@ fun GameScreen(
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Text("Score: ${gameState.currentScore}", color = Color.White, fontWeight = FontWeight.Bold)
-                    Text("Level: ${gameState.level}", color = Color.Cyan, fontWeight = FontWeight.Bold)
+                    Text(stringResource(string.score_label, gameState.currentScore), color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(stringResource(string.level_label, gameState.level), color = Color.Cyan, fontWeight = FontWeight.Bold)
                 }
 
                 gameState.currentBoss?.let {
@@ -132,8 +134,8 @@ fun GameScreen(
                             .padding(horizontal = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("Boss: ${it.name}", color = Color(0xFFE74C3C), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text("Lines: ${it.requiredLines}", color = Color.White)
+                        Text(stringResource(string.boss_label, stringResource(it.nameResId)), color = Color(0xFFE74C3C), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(string.lines_label, it.requiredLines), color = Color.White)
                     }
                 }
 
@@ -245,7 +247,7 @@ fun GameScreen(
                 gameState.artifacts.forEach { artifact ->
                     Image(
                         painter = painterResource(id = artifact.iconResId),
-                        contentDescription = artifact.name,
+                        contentDescription = stringResource(artifact.titleResId),
                         modifier = Modifier
                             .size(48.dp)
                             .graphicsLayer(alpha = 0.8f)
@@ -266,7 +268,7 @@ fun GameScreen(
                 gameState.selectedMutations.forEach { mutation ->
                     Image(
                         painter = painterResource(id = mutation.iconResId),
-                        contentDescription = mutation.name,
+                        contentDescription = stringResource(mutation.titleResId),
                         modifier = Modifier
                             .size(48.dp)
                             .graphicsLayer(alpha = 0.8f)
@@ -322,17 +324,17 @@ fun ArtifactSelectionDialog(
                             ) {
                                 Image(
                                     painter = painterResource(id = artifact.iconResId),
-                                    contentDescription = artifact.name,
+                                    contentDescription = stringResource(artifact.titleResId),
                                     modifier = Modifier.size(64.dp)
                                 )
                                 Text(
-                                    text = artifact.name,
+                                    text = stringResource(artifact.titleResId),
                                     style = MaterialTheme.typography.titleSmall,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                     color = Color.White
                                 )
                                 Text(
-                                    text = artifact.description,
+                                    text = stringResource(artifact.descResId),
                                     style = MaterialTheme.typography.bodySmall,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                     maxLines = 3,
@@ -368,19 +370,19 @@ fun MutationPopup(
                 modifier = Modifier.padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("New Power Acquired!", style = MaterialTheme.typography.headlineSmall, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
+                Text(stringResource(string.new_power_title), style = MaterialTheme.typography.headlineSmall, color = Color(0xFFFFD700), fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(24.dp))
                 Image(
                     painter = painterResource(id = mechanic.iconResId),
-                    contentDescription = mechanic.name,
+                    contentDescription = stringResource(mechanic.titleResId),
                     modifier = Modifier.size(96.dp)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(mechanic.name, style = MaterialTheme.typography.titleLarge, color = Color.White)
+                Text(stringResource(mechanic.titleResId), style = MaterialTheme.typography.titleLarge, color = Color.White)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(mechanic.description, style = MaterialTheme.typography.bodyLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = Color.LightGray)
+                Text(stringResource(mechanic.descResId), style = MaterialTheme.typography.bodyLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = Color.LightGray)
                 Spacer(modifier = Modifier.height(24.dp))
-                Text("Tap anywhere to continue", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                Text(stringResource(string.tap_continue), style = MaterialTheme.typography.labelMedium, color = Color.Gray)
             }
         }
     }

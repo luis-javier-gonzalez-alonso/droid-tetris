@@ -40,4 +40,78 @@
     <string name="boss_label">Jefe: %s</string>
     <string name="new_power_title">¡Nuevo Poder!</string>
     <string name="tap_continue">Toca para continuar</string>
+
+    <!-- Mutations -->
+    <string name="mut_unyielding_title">Implacable</string>
+    <string name="mut_unyielding_desc">Comienza con una línea de basura, y una nueva cada nivel</string>
+    <string name="mut_feather_fall_title">Caída de Pluma</string>
+    <string name="mut_feather_fall_desc">Las piezas caen un 20% más lento</string>
+    <string name="mut_lead_fall_title">Caída de Plomo</string>
+    <string name="mut_lead_fall_desc">Las piezas caen un 25% más rápido</string>
+    <string name="mut_clairvoyance_title">Clarividencia</string>
+    <string name="mut_clairvoyance_desc">Ver las siguientes dos piezas en lugar de una</string>
+    <string name="mut_colorblind_title">Daltónico</string>
+    <string name="mut_colorblind_desc">Todas las piezas son del mismo color</string>
+    <string name="mut_more_is_title">Más \'Is\'</string>
+    <string name="mut_more_is_desc">Aumenta la frecuencia de piezas \'I\'</string>
+    <string name="mut_garbage_collector_title">Recolector de Basura</string>
+    <string name="mut_garbage_collector_desc">Al aparecer una pieza hay probabilidad de añadir basura</string>
+    <string name="mut_time_warp_title">Distorsión Temporal</string>
+    <string name="mut_time_warp_desc">Limpiar una línea tiene 10% de probabilidad de congelar el juego 2s</string>
+    <string name="mut_fair_play_title">Juego Limpio</string>
+    <string name="mut_fair_play_desc">Las 7 piezas únicas aparecerán antes de repetirse</string>
+    <string name="mut_phantom_piece_title">Pieza Fantasma</string>
+    <string name="mut_phantom_piece_desc">Muestra un fantasma de donde aterrizará la pieza</string>
+
+    <!-- Artifacts -->
+    <string name="art_swiftness_charm_title">Amuleto de Rapidez</string>
+    <string name="art_swiftness_charm_desc">Aumenta la velocidad de caída un 10%</string>
+    <string name="art_line_clearer_title">Limpiador de Líneas</string>
+    <string name="art_line_clearer_desc">Limpia una línea extra aleatoriamente</string>
+    <string name="art_score_multiplier_title">Multiplicador de Puntos</string>
+    <string name="art_score_multiplier_desc">Multiplica los puntos por limpiar líneas por 1.5x</string>
+    <string name="art_spring_loaded_title">Rotador con Resorte</string>
+    <string name="art_spring_loaded_desc">Rotar mueve la pieza un espacio hacia arriba</string>
+    <string name="art_chaos_orb_title">Orbe del Caos</string>
+    <string name="art_chaos_orb_desc">Rotar cambia el tipo de pieza</string>
+    <string name="art_falling_fragments_title">Fragmentos Cayendo</string>
+    <string name="art_falling_fragments_desc">Al completar 2 o 4 líneas, caen 2 piezas simples en posiciones aleatorias.</string>
+    <string name="art_board_wipe_title">Limpieza de Tablero</string>
+    <string name="art_board_wipe_desc">Un solo uso: Limpiar 3 líneas al mismo tiempo limpia todo el tablero.</string>
+    <string name="art_inverted_rotation_title">Rotación Invertida</string>
+    <string name="art_inverted_rotation_desc">Invierte la dirección de rotación de las piezas</string>
+    <string name="art_piece_swapper_title">Intercambiador</string>
+    <string name="art_piece_swapper_desc">Intercambia la pieza actual con la siguiente rotando dos veces</string>
+    <string name="art_board_shrinker_title">Encogedor de Tablero</string>
+    <string name="art_board_shrinker_desc">Reduce el ancho del tablero en 2 columnas</string>
+
+    <!-- Badges -->
+    <string name="badge_axe">Hacha</string>
+    <string name="badge_bomb">Bomba</string>
+    <string name="badge_book">Libro</string>
+    <string name="badge_boots">Botas</string>
+    <string name="badge_bulb">Bombilla</string>
+    <string name="badge_cat">Gato</string>
+    <string name="badge_chest">Cofre</string>
+    <string name="badge_coin">Moneda</string>
+    <string name="badge_dog">Perro</string>
+    <string name="badge_feather">Pluma</string>
+    <string name="badge_fire">Fuego</string>
+    <string name="badge_gold">Oro</string>
+    <string name="badge_hat">Sombrero</string>
+    <string name="badge_heart">Corazón</string>
+    <string name="badge_key">Llave</string>
+    <string name="badge_map">Mapa</string>
+    <string name="badge_plant">Planta</string>
+    <string name="badge_potion">Poción</string>
+    <string name="badge_elixir">Elixir</string>
+    <string name="badge_ring">Anillo</string>
+    <string name="badge_shield">Escudo</string>
+    <string name="badge_sun_moon">Sol y Luna</string>
+    <string name="badge_sword">Espada</string>
+    <string name="badge_wand">Varita</string>
+
+    <!-- Bosses -->
+    <string name="boss_wall">El Muro</string>
+    <string name="boss_sprinter">El Velocista</string>
 </resources>
