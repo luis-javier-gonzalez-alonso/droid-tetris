@@ -1,41 +1,15 @@
 package net.ljga.projects.games.tetris.ui.game
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -43,8 +17,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.os.LocaleListCompat
 import kotlinx.coroutines.launch
 import net.ljga.projects.games.tetris.R
+import java.util.Locale
+
+enum class Language(val locale: String, @StringRes val nameRes: Int) {
+    SYSTEM("system", R.string.lang_system),
+    ENGLISH("en", R.string.lang_en),
+    SPANISH("es", R.string.lang_es)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,6 +39,17 @@ fun SettingsScreen(
     val touchSensitivity by viewModel.preferenceDataStore.touchSensitivity.collectAsState(initial = 2.0f)
 
     val coroutineScope = rememberCoroutineScope()
+
+    val userPreferredLanguages = remember {
+        val size = LocaleListCompat.getAdjustedDefault().size()
+        (0 until size).map { LocaleListCompat.getAdjustedDefault()[it]?.language }.toSet()
+    }
+
+    val availableLanguages = remember {
+        Language.entries.filter { lang ->
+            lang.locale == "system" || Locale.forLanguageTag(lang.locale).language in userPreferredLanguages
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -102,11 +95,7 @@ fun SettingsScreen(
             // Language Section
             SettingsSection(title = stringResource(R.string.language_title)) {
                 var expanded by remember { mutableStateOf(false) }
-                val languages = mapOf(
-                    "en" to stringResource(R.string.lang_en),
-                    "es" to stringResource(R.string.lang_es)
-                )
-                val currentLabel = languages[languageCode] ?: stringResource(R.string.lang_system)
+                val currentLanguage = Language.entries.firstOrNull { it.locale == languageCode } ?: Language.SYSTEM
 
                 Box(
                     modifier = Modifier
@@ -120,7 +109,7 @@ fun SettingsScreen(
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color.Cyan)
                     ) {
                         Text(
-                            text = currentLabel,
+                            text = stringResource(currentLanguage.nameRes),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -137,13 +126,13 @@ fun SettingsScreen(
                         onDismissRequest = { expanded = false },
                         modifier = Modifier.background(Color(0xFF2C3E50))
                     ) {
-                        languages.forEach { (code, label) ->
+                        availableLanguages.forEach { lang ->
                             DropdownMenuItem(
-                                text = { Text(text = label, color = Color.White) },
+                                text = { Text(text = stringResource(lang.nameRes), color = Color.White) },
                                 onClick = {
                                     expanded = false
                                     coroutineScope.launch {
-                                        viewModel.preferenceDataStore.setLanguageCode(code)
+                                        viewModel.preferenceDataStore.setLanguageCode(lang.locale)
                                     }
                                 }
                             )
