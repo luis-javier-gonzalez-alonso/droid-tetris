@@ -1,6 +1,7 @@
 
 package net.ljga.projects.games.tetris.ui.game
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -11,7 +12,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import android.util.Log
+import kotlinx.coroutines.flow.map
+import java.util.Locale
 
 private const val TAG = "GameViewModel"
 
@@ -281,6 +283,17 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
             runGame()
         }
     }
+
+    val languageCode: StateFlow<String> = preferenceDataStore.languageCode
+        .map { code ->
+            if (code.isNullOrEmpty()) {
+                val systemLang = Locale.getDefault().language
+                if (systemLang == "es") "es" else "en"
+            } else {
+                code
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "en")
 
     fun pauseGame() {
         gameJob?.cancel()

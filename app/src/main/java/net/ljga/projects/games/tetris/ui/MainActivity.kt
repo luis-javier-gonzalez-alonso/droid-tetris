@@ -1,22 +1,9 @@
-/*
- * Copyright (C) 2022 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package net.ljga.projects.games.tetris.ui
 
+import android.app.LocaleManager
+import android.os.Build
 import android.os.Bundle
+import android.os.LocaleList
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -26,17 +13,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.WindowCompat
-import androidx.lifecycle.lifecycleScope
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 import net.ljga.projects.games.tetris.ui.game.GameViewModel
 import net.ljga.projects.games.tetris.ui.game.GameViewModelFactory
 import net.ljga.projects.games.tetris.ui.game.PreferenceDataStore
@@ -46,29 +34,38 @@ import net.ljga.projects.games.tetris.ui.theme.MyApplicationTheme
 class MainActivity : ComponentActivity() {
 
     private val gameViewModel: GameViewModel by viewModels {
-        GameViewModelFactory(
-            PreferenceDataStore(this)
-        )
+        GameViewModelFactory(PreferenceDataStore(this))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        lifecycleScope.launch {
-            gameViewModel.preferenceDataStore.languageCode.collect { code ->
-                val localeList = if (code == "system") {
-                    LocaleListCompat.getEmptyLocaleList()
-                } else {
-                    LocaleListCompat.forLanguageTags(code)
-                }
-                AppCompatDelegate.setApplicationLocales(localeList)
-            }
-        }
-
         setContent {
             val systemUiController = rememberSystemUiController()
             val useDarkIcons = !isSystemInDarkTheme()
+            val context = LocalContext.current
+
+            val languageCode by gameViewModel.preferenceDataStore.languageCode.collectAsState(initial = null)
+
+            LaunchedEffect(languageCode) {
+                val code = languageCode
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val localeManager = context.getSystemService(LocaleManager::class.java)
+                    if (code == "system" || code == null) {
+                        localeManager.applicationLocales = LocaleList.getEmptyLocaleList()
+                    } else {
+                        localeManager.applicationLocales = LocaleList.forLanguageTags(code)
+                    }
+                } else {
+                    val localeList = if (code == "system" || code == null) {
+                        LocaleListCompat.getEmptyLocaleList()
+                    } else {
+                        LocaleListCompat.forLanguageTags(code)
+                    }
+                    AppCompatDelegate.setApplicationLocales(localeList)
+                }
+            }
 
             SideEffect {
                 systemUiController.setSystemBarsColor(
@@ -79,7 +76,7 @@ class MainActivity : ComponentActivity() {
 
             MyApplicationTheme {
                 Surface(
-                    modifier = Modifier.fillMaxSize().padding(top = 48.dp), // Added padding
+                    modifier = Modifier.fillMaxSize().padding(top = 48.dp),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     MainNavigation(gameViewModel)

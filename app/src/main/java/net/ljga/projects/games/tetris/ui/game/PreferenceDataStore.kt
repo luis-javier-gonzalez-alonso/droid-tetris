@@ -216,8 +216,8 @@ class PreferenceDataStore(private val context: Context) {
         }
 
     // Settings Flows
-    val languageCode: Flow<String> = context.dataStore.data
-        .map { preferences -> preferences[languageCodeKey] ?: "system" }
+    val languageCode: Flow<String?> = context.dataStore.data
+        .map { preferences -> preferences[languageCodeKey] }
 
     val isClassicMode: Flow<Boolean> = context.dataStore.data
         .map { preferences -> preferences[isClassicModeKey] ?: false }
