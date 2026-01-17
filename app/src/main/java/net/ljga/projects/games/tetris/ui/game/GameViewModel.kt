@@ -262,9 +262,12 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
         gameJob = null
         Log.d(TAG, "Starting new game...")
         viewModelScope.launch {
+            val isClassicMode = preferenceDataStore.isClassicMode.first()
             val isDebugMode = mutations.isNotEmpty() || artifacts.isNotEmpty()
             val startingMutations = if (isDebugMode) {
                 mutations
+            } else if (isClassicMode) {
+                emptyList()
             } else {
                 val activeMutationNames = preferenceDataStore.enabledMutations.first()
                 val activeMutations = allMutations.filter { activeMutationNames.contains(it.name) }

@@ -50,6 +50,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        androidx.lifecycle.lifecycleScope.launchWhenCreated {
+            gameViewModel.preferenceDataStore.languageCode.collect { code ->
+                val localeList = if (code == "system") {
+                    androidx.core.os.LocaleListCompat.getEmptyLocaleList()
+                } else {
+                    androidx.core.os.LocaleListCompat.forLanguageTags(code)
+                }
+                androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(localeList)
+            }
+        }
+
         setContent {
             val systemUiController = rememberSystemUiController()
             val useDarkIcons = !isSystemInDarkTheme()

@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.res.stringResource
 import net.ljga.projects.games.tetris.R
 
 @Composable
@@ -29,7 +30,8 @@ fun MenuScreen(
     onNewGame: () -> Unit,
     onNewDebugGame: (List<Mutation>, List<Artifact>) -> Unit,
     onMutations: () -> Unit,
-    onShop: () -> Unit
+    onShop: () -> Unit,
+    onSettings: () -> Unit
 ) {
     val gameState by gameViewModel.gameState.collectAsState()
     val highScore by gameViewModel.highScore.collectAsState()
@@ -68,7 +70,7 @@ fun MenuScreen(
             // Title
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "FRACTURE",
+                    text = stringResource(R.string.title_fracture),
                     style = TextStyle(
                         fontSize = 48.sp,
                         fontWeight = FontWeight.ExtraBold,
@@ -83,7 +85,7 @@ fun MenuScreen(
                     )
                 )
                 Text(
-                    text = "GRID",
+                    text = stringResource(R.string.title_grid),
                     style = TextStyle(
                         fontSize = 48.sp,
                         fontWeight = FontWeight.ExtraBold,
@@ -114,7 +116,7 @@ fun MenuScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("HIGH SCORE", fontSize = 10.sp, color = Color.Gray)
+                        Text(stringResource(R.string.high_score), fontSize = 10.sp, color = Color.Gray)
                         Text("$highScore", fontSize = 20.sp, color = Color.White, fontWeight = FontWeight.Bold)
                     }
                     Spacer(modifier = Modifier.width(32.dp))
@@ -134,22 +136,25 @@ fun MenuScreen(
 
             // Buttons
             if (gameState.piece != null && !gameState.isGameOver) {
-                MenuButton(text = "CONTINUE", onClick = onContinue, color = Color(0xFF2ECC71))
+                MenuButton(text = stringResource(R.string.continue_game), onClick = onContinue, color = Color(0xFF2ECC71))
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            MenuButton(text = "NEW GAME", onClick = onNewGame, color = Color(0xFF3498DB))
+            MenuButton(text = stringResource(R.string.new_game), onClick = onNewGame, color = Color(0xFF3498DB))
             Spacer(modifier = Modifier.height(16.dp))
 
-            MenuButton(text = "MUTATIONS", onClick = onMutations, color = Color(0xFF9B59B6))
+            MenuButton(text = stringResource(R.string.mutations), onClick = onMutations, color = Color(0xFF9B59B6))
             Spacer(modifier = Modifier.height(16.dp))
 
-            MenuButton(text = "SHOP", onClick = onShop, color = Color(0xFFF1C40F))
+            MenuButton(text = stringResource(R.string.shop), onClick = onShop, color = Color(0xFFF1C40F))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            MenuButton(text = stringResource(R.string.settings), onClick = onSettings, color = Color.Gray)
             
             Spacer(modifier = Modifier.height(32.dp))
             
             TextButton(onClick = { showDebugMenu = true }) {
-                Text("Debug Mode", color = Color.Gray)
+                Text(stringResource(R.string.debug_mode), color = Color.Gray)
             }
         }
     }

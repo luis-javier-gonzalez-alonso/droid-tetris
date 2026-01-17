@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fracture Grid</string>
+    <string name="title_fracture">FRACTURE</string>
+    <string name="title_grid">GRID</string>
+    <string name="high_score">RÉCORD</string>
+    <string name="continue_game">CONTINUAR</string>
+    <string name="new_game">NUEVO JUEGO</string>
+    <string name="mutations">MUTACIONES</string>
+    <string name="shop">TIENDA</string>
+    <string name="debug_mode">Depuración</string>
+    <string name="back">Volver</string>
+    <string name="settings">AJUSTES</string>
+
+    <string name="shop_title">Tienda</string>
+    <string name="tab_mutations">Mutaciones</string>
+    <string name="tab_badges">Insignias</string>
+    <string name="coins_format">Monedas: %d</string>
+    <string name="owned">EN POSESIÓN</string>
+    <string name="purchase_confirm_title">¿Comprar %s?</string>
+    <string name="cost_format">Coste: %d Monedas</string>
+    <string name="purchase_button">Comprar</string>
+    <string name="cancel_button">Cancelar</string>
+
+    <string name="settings_title">Ajustes</string>
+    <string name="language_title">Idioma</string>
+    <string name="game_mode_title">Modo de Juego</string>
+    <string name="classic_mode_label">Modo Clásico</string>
+    <string name="controls_title">Controles</string>
+    <string name="sensitivity_label">Sensibilidad: %.1f</string>
+    <string name="lang_system">Sistema</string>
+    <string name="lang_en">Inglés</string>
+    <string name="lang_es">Español</string>
+
+    <string name="game_over">FIN DEL JUEGO</string>
+    <string name="your_score">Puntuación: %d</string>
+    <string name="score_label">Puntos: %d</string>
+    <string name="level_label">Nivel: %d</string>
+    <string name="lines_label">Líneas: %d</string>
+    <string name="boss_label">Jefe: %s</string>
+    <string name="new_power_title">¡Nuevo Poder!</string>
+    <string name="tap_continue">Toca para continuar</string>
+</resources>

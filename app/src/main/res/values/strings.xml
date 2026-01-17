@@ -15,5 +15,44 @@
   -->
 
 <resources>
-    <string name="app_name">DroidTetris</string>
+    <string name="app_name">Fracture Grid</string>
+    <string name="title_fracture">FRACTURE</string>
+    <string name="title_grid">GRID</string>
+    <string name="high_score">HIGH SCORE</string>
+    <string name="continue_game">CONTINUE</string>
+    <string name="new_game">NEW GAME</string>
+    <string name="mutations">MUTATIONS</string>
+    <string name="shop">SHOP</string>
+    <string name="debug_mode">Debug Mode</string>
+    <string name="back">Back</string>
+    <string name="settings">SETTINGS</string>
+
+    <string name="shop_title">Shop</string>
+    <string name="tab_mutations">Mutations</string>
+    <string name="tab_badges">Badges</string>
+    <string name="coins_format">Coins: %d</string>
+    <string name="owned">OWNED</string>
+    <string name="purchase_confirm_title">Purchase %s?</string>
+    <string name="cost_format">Cost: %d Coins</string>
+    <string name="purchase_button">Purchase</string>
+    <string name="cancel_button">Cancel</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="language_title">Language</string>
+    <string name="game_mode_title">Game Mode</string>
+    <string name="classic_mode_label">Classic Mode</string>
+    <string name="controls_title">Controls</string>
+    <string name="sensitivity_label">Touch Sensitivity: %.1f</string>
+    <string name="lang_system">System</string>
+    <string name="lang_en">English</string>
+    <string name="lang_es">Español</string>
+
+    <string name="game_over">GAME OVER</string>
+    <string name="your_score">Your score: %d</string>
+    <string name="score_label">Score: %d</string>
+    <string name="level_label">Level: %d</string>
+    <string name="lines_label">Lines: %d</string>
+    <string name="boss_label">Boss: %s</string>
+    <string name="new_power_title">New Power Acquired!</string>
+    <string name="tap_continue">Tap anywhere to continue</string>
 </resources>

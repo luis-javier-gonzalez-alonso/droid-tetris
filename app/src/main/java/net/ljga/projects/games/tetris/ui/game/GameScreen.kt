@@ -34,6 +34,7 @@ fun GameScreen(
     onBack: () -> Unit = {}
 ) {
     val gameState by gameViewModel.gameState.collectAsState()
+    val sensitivity by gameViewModel.preferenceDataStore.touchSensitivity.collectAsState(initial = 2.0f)
     val coroutineScope = rememberCoroutineScope()
 
     var accumulatedDragX by remember { mutableFloatStateOf(0f) }
@@ -170,15 +171,17 @@ fun GameScreen(
                                             val squareSizeWidth = size.width / gameViewModel.boardWidth
                                             val squareSizeHeight = size.height / gameViewModel.boardHeight
 
-                                            if (accumulatedDragX > squareSizeWidth * 0.7) {
+                                            val threshold = squareSizeWidth / sensitivity
+
+                                            if (accumulatedDragX > threshold) {
                                                 gameViewModel.moveRight()
                                                 accumulatedDragX = 0f
-                                            } else if (accumulatedDragX < -squareSizeWidth * 0.7) {
+                                            } else if (accumulatedDragX < -threshold) {
                                                 gameViewModel.moveLeft()
                                                 accumulatedDragX = 0f
                                             }
 
-                                            if (accumulatedDragY > squareSizeHeight * 0.7) {
+                                            if (accumulatedDragY > squareSizeHeight / sensitivity) {
                                                 gameViewModel.moveDown()
                                                 accumulatedDragY = 0f
                                             }

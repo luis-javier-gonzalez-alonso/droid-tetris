@@ -11,6 +11,8 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.floatPreferencesKey
 import com.google.gson.JsonElement
 import com.google.gson.TypeAdapter
 import com.google.gson.TypeAdapterFactory
@@ -119,6 +121,11 @@ class PreferenceDataStore(private val context: Context) {
     private val enabledMutationsKey = stringSetPreferencesKey("enabled_mutations")
     private val coinsKey = intPreferencesKey("coins")
     private val ownedBadgesKey = stringSetPreferencesKey("owned_badges")
+    
+    // Settings Keys
+    private val languageCodeKey = stringPreferencesKey("language_code")
+    private val isClassicModeKey = booleanPreferencesKey("is_classic_mode")
+    private val touchSensitivityKey = floatPreferencesKey("touch_sensitivity")
 
     val highScore: Flow<Int> = context.dataStore.data
         .map { preferences ->
@@ -207,6 +214,29 @@ class PreferenceDataStore(private val context: Context) {
         .map { preferences ->
             preferences[ownedBadgesKey] ?: emptySet()
         }
+
+    // Settings Flows
+    val languageCode: Flow<String> = context.dataStore.data
+        .map { preferences -> preferences[languageCodeKey] ?: "system" }
+
+    val isClassicMode: Flow<Boolean> = context.dataStore.data
+        .map { preferences -> preferences[isClassicModeKey] ?: false }
+
+    val touchSensitivity: Flow<Float> = context.dataStore.data
+        .map { preferences -> preferences[touchSensitivityKey] ?: 2.0f }
+
+    // Settings Updates
+    suspend fun setLanguageCode(code: String) {
+        context.dataStore.edit { it[languageCodeKey] = code }
+    }
+
+    suspend fun setClassicMode(enabled: Boolean) {
+        context.dataStore.edit { it[isClassicModeKey] = enabled }
+    }
+
+    suspend fun setTouchSensitivity(sensitivity: Float) {
+        context.dataStore.edit { it[touchSensitivityKey] = sensitivity }
+    }
 
     suspend fun addCoins(amount: Int) {
         context.dataStore.edit {
