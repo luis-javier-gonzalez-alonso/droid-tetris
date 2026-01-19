@@ -59,7 +59,10 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
                 _gameState.value = it
             } ?: run {
                 val startingMutation = if (_mutations.value.isNotEmpty()) listOf(_mutations.value.random()) else emptyList()
-                _gameState.value = _gameState.value.copy(selectedMutations = startingMutation)
+                _gameState.value = _gameState.value.copy(
+                    selectedMutations = startingMutation,
+                    pendingMutationPopup = startingMutation.firstOrNull() // Set popup if a starting mutation exists
+                )
             }
         }
     }
@@ -277,11 +280,16 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
                 if (activeMutations.isNotEmpty()) listOf(activeMutations.random()) else emptyList()
             }
 
-            _gameState.value = GameState(createEmptyBoard(), null, Companion.pieces.random(), Companion.pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, artifacts, startingMutations, null, Companion.pieces.shuffled(), 0, emptyList(), 0, isDebugMode, emptyList())
+            _gameState.value = GameState(createEmptyBoard(), null, Companion.pieces.random(), Companion.pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, artifacts, startingMutations, null, Companion.pieces.shuffled(), 0, emptyList(), 0, isDebugMode, emptyList(), pendingMutationPopup = startingMutations.firstOrNull())
             applyStartingMutations()
 
             preferenceDataStore.clearSavedGame()
-            runGame()
+            
+            // Only run game immediately if there is NO popup pending
+            // If there is a popup, we wait for dismissal
+            if (startingMutations.isEmpty()) {
+                runGame()
+            }
         }
     }
 

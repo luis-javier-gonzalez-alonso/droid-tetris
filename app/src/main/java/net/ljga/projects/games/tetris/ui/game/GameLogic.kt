@@ -325,7 +325,11 @@ fun GameViewModel.addRandomMutationToRun() {
         val availableMutations = allMutations.filter { activeMutationNames.contains(it.name) && !_gameState.value.selectedMutations.contains(it) }
         if (availableMutations.isNotEmpty()) {
             val newMutation = availableMutations.random()
-            _gameState.value = _gameState.value.copy(selectedMutations = _gameState.value.selectedMutations + newMutation)
+            _gameState.value = _gameState.value.copy(
+                selectedMutations = _gameState.value.selectedMutations + newMutation,
+                pendingMutationPopup = newMutation
+            )
+            pauseGame()
         }
     }
 }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +24,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -319,27 +321,37 @@ fun ArtifactSelectionDialog(
                                 modifier = Modifier
                                     .padding(8.dp)
                                     .fillMaxSize(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.SpaceBetween
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Image(
-                                    painter = painterResource(id = artifact.iconResId),
-                                    contentDescription = stringResource(artifact.titleResId),
-                                    modifier = Modifier.size(64.dp)
-                                )
+                                // Icon (placeholder or real)
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .padding(bottom = 8.dp)
+                                ) {
+                                    if (artifact.iconResId != 0) {
+                                        Image(
+                                            painter = painterResource(id = artifact.iconResId),
+                                            contentDescription = stringResource(artifact.titleResId),
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    } else {
+                                        // Fallback circle
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(Color.Cyan, CircleShape)
+                                        )
+                                    }
+                                }
+
                                 Text(
                                     text = stringResource(artifact.titleResId),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    color = Color.White
-                                )
-                                Text(
-                                    text = stringResource(artifact.descResId),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    maxLines = 3,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                    color = Color.LightGray
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         }
