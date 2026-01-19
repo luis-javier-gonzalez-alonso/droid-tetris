@@ -126,6 +126,7 @@ class PreferenceDataStore(private val context: Context) {
     private val languageCodeKey = stringPreferencesKey("language_code")
     private val isClassicModeKey = booleanPreferencesKey("is_classic_mode")
     private val touchSensitivityKey = floatPreferencesKey("touch_sensitivity")
+    private val lastSeedKey = androidx.datastore.preferences.core.longPreferencesKey("last_seed")
 
     val highScore: Flow<Int> = context.dataStore.data
         .map { preferences ->
@@ -233,6 +234,13 @@ class PreferenceDataStore(private val context: Context) {
     suspend fun setClassicMode(enabled: Boolean) {
         context.dataStore.edit { it[isClassicModeKey] = enabled }
     }
+
+    suspend fun updateLastSeed(seed: Long) {
+        context.dataStore.edit { it[lastSeedKey] = seed }
+    }
+
+    val lastSeed: Flow<Long?> = context.dataStore.data
+        .map { preferences -> preferences[lastSeedKey] }
 
     suspend fun setTouchSensitivity(sensitivity: Float) {
         context.dataStore.edit { it[touchSensitivityKey] = sensitivity }

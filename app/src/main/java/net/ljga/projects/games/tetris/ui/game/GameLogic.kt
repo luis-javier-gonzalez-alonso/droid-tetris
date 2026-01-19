@@ -14,7 +14,7 @@ fun GameViewModel.createEmptyBoard(): Array<IntArray> = Array(boardHeight) { Int
 
 fun GameViewModel.applyStartingMutations() {
     _gameState.value = _gameState.value.applyHook<IOnNewGameHook> { hook, state ->
-        hook.onNewGame(state)
+        hook.onNewGame(state, rng)
     }
 }
 
@@ -44,12 +44,12 @@ fun GameViewModel.runGame() {
                     var state = _gameState.value
                     _gameState.value.selectedMutations.forEach { mutation ->
                         if (mutation is IOnLineClearHook) {
-                            state = mutation.onLineClear(state, linesCleared)
+                            state = mutation.onLineClear(state, linesCleared, rng)
                         }
                     }
                     _gameState.value.artifacts.forEach { artifact ->
                         if (artifact is IOnLineClearHook) {
-                            state = artifact.onLineClear(state, linesCleared)
+                            state = artifact.onLineClear(state, linesCleared, rng)
                         }
                     }
                     _gameState.value = state
@@ -117,7 +117,7 @@ suspend fun GameViewModel.clearLines(): Int {
 
     for (artifact in _gameState.value.artifacts) {
         if (artifact is IBeforeLineClearHook) {
-            linesToClear = artifact.beforeLineClear(linesToClear, _gameState.value).toMutableList()
+            linesToClear = artifact.beforeLineClear(linesToClear, _gameState.value, rng).toMutableList()
         }
     }
 
@@ -132,7 +132,7 @@ suspend fun GameViewModel.clearLines(): Int {
             .find { it.supportedLineCounts.contains(linesToClearList.size) }
 
         _gameState.value = if (strategy != null) {
-            strategy.execute(_gameState.value, linesToClearList)
+            strategy.execute(_gameState.value, linesToClearList, rng)
         } else {
             DefaultLineClearStrategy.execute(_gameState.value, linesToClearList)
         }
@@ -217,12 +217,12 @@ suspend fun GameViewModel.updateScoreAndLevel(linesCleared: Int) {
             var state = _gameState.value
             _gameState.value.selectedMutations.forEach { mutation ->
                 if (mutation is IOnLevelUpHook) {
-                    state = mutation.onLevelUp(state)
+                    state = mutation.onLevelUp(state, rng)
                 }
             }
             _gameState.value.artifacts.forEach { artifact ->
                 if (artifact is IOnLevelUpHook) {
-                    state = artifact.onLevelUp(state)
+                    state = artifact.onLevelUp(state, rng)
                 }
             }
             _gameState.value = state
@@ -230,7 +230,7 @@ suspend fun GameViewModel.updateScoreAndLevel(linesCleared: Int) {
             if (allArtifacts.size > _gameState.value.artifacts.size) {
                 val availableArtifacts = allArtifacts.filterNot { _gameState.value.artifacts.contains(it) }
                 if (availableArtifacts.size >= 2) {
-                    val choices = availableArtifacts.shuffled().take(2)
+                    val choices = availableArtifacts.shuffled(rng).take(2)
                     _gameState.value = _gameState.value.copy(artifactChoices = choices)
                     pauseGame()
                 }
@@ -270,9 +270,9 @@ fun GameViewModel.lockPiece() {
 suspend fun GameViewModel.spawnNewPiece(): Boolean {
     var state = _gameState.value
 
-    val pieceToSpawn = state.nextPiece ?: pieces.random()
-    val nextPiece = state.secondNextPiece ?: pieces.random()
-    val secondNextPiece = pieces.random()
+    val pieceToSpawn = state.nextPiece ?: pieces.random(rng)
+    val nextPiece = state.secondNextPiece ?: pieces.random(rng)
+    val secondNextPiece = pieces.random(rng)
 
     val startX = boardWidth / 2 - pieceToSpawn.shape[0].size / 2
     val startY = 0
@@ -287,12 +287,12 @@ suspend fun GameViewModel.spawnNewPiece(): Boolean {
 
     _gameState.value.selectedMutations.forEach { mutation ->
         if (mutation is IOnPieceSpawnHook) {
-            state = mutation.onPieceSpawn(state)
+            state = mutation.onPieceSpawn(state, rng)
         }
     }
     _gameState.value.artifacts.forEach { artifact ->
         if (artifact is IOnPieceSpawnHook) {
-            state = artifact.onPieceSpawn(state)
+            state = artifact.onPieceSpawn(state, rng)
         }
     }
 
@@ -324,7 +324,7 @@ fun GameViewModel.addRandomMutationToRun() {
         val activeMutationNames = preferenceDataStore.enabledMutations.first()
         val availableMutations = allMutations.filter { activeMutationNames.contains(it.name) && !_gameState.value.selectedMutations.contains(it) }
         if (availableMutations.isNotEmpty()) {
-            val newMutation = availableMutations.random()
+            val newMutation = availableMutations.random(rng)
             _gameState.value = _gameState.value.copy(
                 selectedMutations = _gameState.value.selectedMutations + newMutation,
                 pendingMutationPopup = newMutation
@@ -335,7 +335,7 @@ fun GameViewModel.addRandomMutationToRun() {
 }
 
 fun GameViewModel.spawnBoss(level: Int): GameViewModel.Boss {
-    val boss = bosses.random().copy()
+    val boss = bosses.random(rng).copy()
     boss.requiredLines = level * 2
     return boss
 }

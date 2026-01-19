@@ -1,6 +1,6 @@
 package net.ljga.projects.games.tetris.ui.game
 
-import java.util.Random
+import kotlin.random.Random
 
 import net.ljga.projects.games.tetris.R
 
@@ -24,7 +24,7 @@ interface GameMechanic {
  * Use to modify initial game state (e.g., adding starting obstacles).
  */
 interface IOnNewGameHook : GameMechanic {
-    fun onNewGame(gameState: GameViewModel.GameState): GameViewModel.GameState
+    fun onNewGame(gameState: GameViewModel.GameState, rng: Random): GameViewModel.GameState
 }
 
 /**
@@ -32,7 +32,7 @@ interface IOnNewGameHook : GameMechanic {
  * Use for level-dependent effects (e.g., adding obstacles per level).
  */
 interface IOnLevelUpHook : GameMechanic {
-    fun onLevelUp(gameState: GameViewModel.GameState): GameViewModel.GameState
+    fun onLevelUp(gameState: GameViewModel.GameState, rng: Random): GameViewModel.GameState
 }
 
 /**
@@ -40,7 +40,7 @@ interface IOnLevelUpHook : GameMechanic {
  * Use to modify the spawned piece or game state (e.g., change piece color, position).
  */
 interface IOnPieceSpawnHook : GameMechanic {
-    fun onPieceSpawn(gameState: GameViewModel.GameState): GameViewModel.GameState
+    fun onPieceSpawn(gameState: GameViewModel.GameState, rng: Random): GameViewModel.GameState
 }
 
 /**
@@ -57,7 +57,7 @@ interface ILineClearStrategy : GameMechanic {
      * @param linesIndices The indices of the lines that are being cleared (sorted).
      * @return The new game state.
      */
-    suspend fun execute(gameState: GameViewModel.GameState, linesIndices: List<Int>): GameViewModel.GameState
+    suspend fun execute(gameState: GameViewModel.GameState, linesIndices: List<Int>, rng: Random): GameViewModel.GameState
 }
 
 /**
@@ -66,7 +66,7 @@ interface ILineClearStrategy : GameMechanic {
  * NOTE: This runs AFTER the strategy execution.
  */
 interface IOnLineClearHook : GameMechanic {
-    suspend fun onLineClear(gameState: GameViewModel.GameState, linesCleared: Int): GameViewModel.GameState
+    suspend fun onLineClear(gameState: GameViewModel.GameState, linesCleared: Int, rng: Random): GameViewModel.GameState
 }
 
 /**
@@ -122,7 +122,7 @@ interface IPositionValidator : GameMechanic {
  * Use to modify which lines will be cleared (e.g., adding extra lines).
  */
 interface IBeforeLineClearHook : GameMechanic {
-    fun beforeLineClear(linesToClear: List<Int>, gameState: GameViewModel.GameState): List<Int>
+    fun beforeLineClear(linesToClear: List<Int>, gameState: GameViewModel.GameState, rng: Random): List<Int>
 }
 
 /**
@@ -156,10 +156,9 @@ abstract class Artifact(
 
 
 class UnyieldingMutation : Mutation("Unyielding", R.string.mut_unyielding_title, R.string.mut_unyielding_desc, R.drawable.ic_mutation_unyielding, 2.0f), IOnNewGameHook, IOnLevelUpHook {
-    private fun addGarbageLine(board: Array<IntArray>): Array<IntArray> {
+    private fun addGarbageLine(board: Array<IntArray>, rng: Random): Array<IntArray> {
         val newBoard = board.map { it.clone() }.toTypedArray()
-        val random = Random()
-        val randomX = random.nextInt(newBoard[0].size)
+        val randomX = rng.nextInt(newBoard[0].size)
         var targetY = newBoard.size - 1
 
         while (targetY >= 0 && newBoard[targetY][randomX] != 0) {
@@ -175,12 +174,12 @@ class UnyieldingMutation : Mutation("Unyielding", R.string.mut_unyielding_title,
         return newBoard
     }
 
-    override fun onNewGame(gameState: GameViewModel.GameState): GameViewModel.GameState {
-        return gameState.copy(board = addGarbageLine(gameState.board))
+    override fun onNewGame(gameState: GameViewModel.GameState, rng: Random): GameViewModel.GameState {
+        return gameState.copy(board = addGarbageLine(gameState.board, rng))
     }
 
-    override fun onLevelUp(gameState: GameViewModel.GameState): GameViewModel.GameState {
-        return gameState.copy(board = addGarbageLine(gameState.board))
+    override fun onLevelUp(gameState: GameViewModel.GameState, rng: Random): GameViewModel.GameState {
+        return gameState.copy(board = addGarbageLine(gameState.board, rng))
     }
 }
 
@@ -199,7 +198,7 @@ class LeadFallMutation : Mutation("Lead Fall", R.string.mut_lead_fall_title, R.s
 class ClairvoyanceMutation : Mutation("Clairvoyance", R.string.mut_clairvoyance_title, R.string.mut_clairvoyance_desc, R.drawable.ic_mutation_clairvoyance, 0.8f)
 
 class ColorblindMutation : Mutation("Colorblind", R.string.mut_colorblind_title, R.string.mut_colorblind_desc, R.drawable.ic_mutation_colorblind, 1.5f), IOnPieceSpawnHook {
-    override fun onPieceSpawn(gameState: GameViewModel.GameState): GameViewModel.GameState {
+    override fun onPieceSpawn(gameState: GameViewModel.GameState, rng: Random): GameViewModel.GameState {
         val piece = gameState.piece ?: return gameState
         val nextPiece = gameState.nextPiece
         val secondNextPiece = gameState.secondNextPiece
@@ -212,8 +211,8 @@ class ColorblindMutation : Mutation("Colorblind", R.string.mut_colorblind_title,
 }
 
 class MoreIsMutation : Mutation("More 'I's", R.string.mut_more_is_title, R.string.mut_more_is_desc, R.drawable.ic_mutation_more_is, 0.9f), IOnPieceSpawnHook {
-    override fun onPieceSpawn(gameState: GameViewModel.GameState): GameViewModel.GameState {
-        if (Random().nextInt(5) == 0) {
+    override fun onPieceSpawn(gameState: GameViewModel.GameState, rng: Random): GameViewModel.GameState {
+        if (rng.nextInt(5) == 0) {
             val iPiece = GameViewModel.pieces.first() // I-piece is first in the list
             return gameState.copy(piece = iPiece)
         }
@@ -222,10 +221,10 @@ class MoreIsMutation : Mutation("More 'I's", R.string.mut_more_is_title, R.strin
 }
 
 class GarbageCollectorMutation : Mutation("Garbage Collector", R.string.mut_garbage_collector_title, R.string.mut_garbage_collector_desc, R.drawable.ic_mutation_unyielding, 1.3f), IOnPieceSpawnHook {
-    override fun onPieceSpawn(gameState: GameViewModel.GameState): GameViewModel.GameState {
-        if (Random().nextInt(10) == 0) {
+    override fun onPieceSpawn(gameState: GameViewModel.GameState, rng: Random): GameViewModel.GameState {
+        if (rng.nextInt(10) == 0) {
             val newBoard = gameState.board.map { it.clone() }.toTypedArray()
-            val randomX = Random().nextInt(newBoard[0].size)
+            val randomX = rng.nextInt(newBoard[0].size)
             var targetY = newBoard.size - 1
 
             while (targetY >= 0 && newBoard[targetY][randomX] != 0) {
@@ -245,8 +244,8 @@ class GarbageCollectorMutation : Mutation("Garbage Collector", R.string.mut_garb
 }
 
 class TimeWarpMutation : Mutation("Time Warp", R.string.mut_time_warp_title, R.string.mut_time_warp_desc, R.drawable.ic_mutation_unyielding, 0.9f), IOnLineClearHook {
-    override suspend fun onLineClear(gameState: GameViewModel.GameState, linesCleared: Int): GameViewModel.GameState {
-        if (linesCleared > 0 && Random().nextInt(10) == 0) {
+    override suspend fun onLineClear(gameState: GameViewModel.GameState, linesCleared: Int, rng: Random): GameViewModel.GameState {
+        if (linesCleared > 0 && rng.nextInt(10) == 0) {
             kotlinx.coroutines.delay(2000)
         }
         return gameState
@@ -254,10 +253,10 @@ class TimeWarpMutation : Mutation("Time Warp", R.string.mut_time_warp_title, R.s
 }
 
 class FairPlayMutation : Mutation("Fair Play", R.string.mut_fair_play_title, R.string.mut_fair_play_desc, R.drawable.ic_mutation_unyielding, 0.8f), IOnPieceSpawnHook {
-    override fun onPieceSpawn(gameState: GameViewModel.GameState): GameViewModel.GameState {
+    override fun onPieceSpawn(gameState: GameViewModel.GameState, rng: Random): GameViewModel.GameState {
         var queue = gameState.pieceQueue
         if (queue.isEmpty()) {
-            queue = GameViewModel.pieces.shuffled()
+            queue = GameViewModel.pieces.shuffled(rng)
         }
         val piece = queue.first()
         var nextQueue = queue.drop(1)
@@ -265,12 +264,12 @@ class FairPlayMutation : Mutation("Fair Play", R.string.mut_fair_play_title, R.s
         var nextPiece = gameState.nextPiece
         var secondNextPiece = gameState.secondNextPiece
         if (nextQueue.isEmpty()) {
-            nextQueue = GameViewModel.pieces.shuffled()
+            nextQueue = GameViewModel.pieces.shuffled(rng)
         }
         nextPiece = nextQueue.first()
         nextQueue = nextQueue.drop(1)
         if (nextQueue.isEmpty()) {
-            nextQueue = GameViewModel.pieces.shuffled()
+            nextQueue = GameViewModel.pieces.shuffled(rng)
         }
         secondNextPiece = nextQueue.first()
         return gameState.copy(
@@ -293,9 +292,9 @@ class SwiftnessCharmArtifact : Artifact("Swiftness Charm", R.string.art_swiftnes
 }
 
 class LineClearerArtifact : Artifact("Line Clearer", R.string.art_line_clearer_title, R.string.art_line_clearer_desc, R.drawable.ic_mutation_unyielding), IBeforeLineClearHook {
-    override fun beforeLineClear(linesToClear: List<Int>, gameState: GameViewModel.GameState): List<Int> {
+    override fun beforeLineClear(linesToClear: List<Int>, gameState: GameViewModel.GameState, rng: Random): List<Int> {
         if (linesToClear.isNotEmpty()) {
-            val randomLine = (0 until gameState.board.size).random()
+            val randomLine = (0 until gameState.board.size).random(rng)
             if (!linesToClear.contains(randomLine)) {
                 return linesToClear + randomLine
             }
@@ -318,9 +317,9 @@ class SpringLoadedRotatorArtifact : Artifact("Spring-loaded Rotator", R.string.a
 
 class ChaosOrbArtifact : Artifact("Chaos Orb", R.string.art_chaos_orb_title, R.string.art_chaos_orb_desc, R.drawable.ic_mutation_unyielding), IRotationOverride {
     override fun onRotate(gameState: GameViewModel.GameState, gameViewModel: GameViewModel): GameViewModel.GameState {
-        val newPiece = GameViewModel.pieces.random()
+        val newPiece = GameViewModel.pieces.random(gameViewModel.rng)
         var rotatedShape = newPiece.shape
-        val numRotations = Random().nextInt(4)
+        val numRotations = gameViewModel.rng.nextInt(4)
         for (i in 0 until numRotations) {
             val currentShape = rotatedShape
             rotatedShape = Array(currentShape[0].size) { IntArray(currentShape.size) }
@@ -343,15 +342,14 @@ class ChaosOrbArtifact : Artifact("Chaos Orb", R.string.art_chaos_orb_title, R.s
 class FallingFragmentsArtifact : Artifact("Falling Fragments", R.string.art_falling_fragments_title, R.string.art_falling_fragments_desc, R.drawable.ic_mutation_unyielding), ILineClearStrategy {
     override val supportedLineCounts: Set<Int> = setOf(2, 4)
 
-    override suspend fun execute(gameState: GameViewModel.GameState, linesIndices: List<Int>): GameViewModel.GameState {
+    override suspend fun execute(gameState: GameViewModel.GameState, linesIndices: List<Int>, rng: Random): GameViewModel.GameState {
         // First, perform standard line clearing logic
         var state = DefaultLineClearStrategy.execute(gameState, linesIndices)
 
         // Then add falling fragments
-        val random = Random()
         val newFragments = state.fallingFragments.toMutableList()
         repeat(2) {
-            newFragments.add(Pair(random.nextInt(state.board[0].size), 0))
+            newFragments.add(Pair(rng.nextInt(state.board[0].size), 0))
         }
         return state.copy(fallingFragments = newFragments)
     }
@@ -360,7 +358,7 @@ class FallingFragmentsArtifact : Artifact("Falling Fragments", R.string.art_fall
 class BoardWipeArtifact : Artifact("Board Wipe", R.string.art_board_wipe_title, R.string.art_board_wipe_desc, R.drawable.ic_mutation_unyielding), ILineClearStrategy {
     override val supportedLineCounts: Set<Int> = setOf(3)
 
-    override suspend fun execute(gameState: GameViewModel.GameState, linesIndices: List<Int>): GameViewModel.GameState {
+    override suspend fun execute(gameState: GameViewModel.GameState, linesIndices: List<Int>, rng: Random): GameViewModel.GameState {
         // Completely wipe the board instead of just clearing lines
         val newArtifacts = gameState.artifacts.filter { it.name != name }
         return gameState.copy(board = Array(gameState.board.size) { IntArray(gameState.board[0].size) }, artifacts = newArtifacts)
@@ -387,7 +385,7 @@ class PieceSwapperArtifact : Artifact("Piece Swapper", R.string.art_piece_swappe
 }
 
 class BoardShrinkerArtifact : Artifact("Board Shrinker", R.string.art_board_shrinker_title, R.string.art_board_shrinker_desc, R.drawable.ic_mutation_unyielding), IPositionValidator, IOnPieceSpawnHook {
-    override fun onPieceSpawn(gameState: GameViewModel.GameState): GameViewModel.GameState {
+    override fun onPieceSpawn(gameState: GameViewModel.GameState, rng: Random): GameViewModel.GameState {
         val piece = gameState.piece ?: return gameState
         // Adjust spawn X to be centered in the shrunk (8-column) area
         val shrunkWidth = gameState.board[0].size - 2

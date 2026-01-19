@@ -23,7 +23,11 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
     val boardWidth = 10
     val boardHeight = 20
 
-    val _gameState = MutableStateFlow(GameState(createEmptyBoard(), null, null, null, 0, 0, emptyList(), 0, 1, 5, false, emptyList(), emptyList(), null, listOf(), 0, emptyList(), 0, false, emptyList()))
+    val _gameState = MutableStateFlow(GameState(
+        createEmptyBoard(), null, null, null, 0, 0, emptyList(), 0, 1, 5, false,
+        emptyList(), emptyList(), null, listOf(), 0, emptyList(), 0, false, emptyList(),
+        seed = 0L, rngCount = 0
+    ))
     val gameState: StateFlow<GameState> = _gameState
 
     var _highScore = MutableStateFlow(0)
@@ -44,6 +48,9 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
     val enabledMutations: StateFlow<Set<String>> = preferenceDataStore.enabledMutations
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
 
+    val lastSeed: StateFlow<Long?> = preferenceDataStore.lastSeed
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
     var debugMutations: List<Mutation> = emptyList()
     var debugArtifacts: List<Artifact> = emptyList()
 
@@ -57,13 +64,35 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
 
             preferenceDataStore.gameState.first()?.let {
                 _gameState.value = it
+                // Restore RNG state
+                gameRandom = GameRandom(it.seed)
+                // Fast forward
+                repeat(it.rngCount) { gameRandom.nextBits(32) }
             } ?: run {
-                val startingMutation = if (_mutations.value.isNotEmpty()) listOf(_mutations.value.random()) else emptyList()
+                val startingMutation = if (_mutations.value.isNotEmpty()) listOf(_mutations.value.random(kotlin.random.Random)) else emptyList()
+                // Initial empty state, will be overwritten by newGame or saved state
+                // seed=0 is temporary
                 _gameState.value = _gameState.value.copy(
-                    selectedMutations = startingMutation,
-                    pendingMutationPopup = startingMutation.firstOrNull() // Set popup if a starting mutation exists
+                    selectedMutations = startingMutation, 
+                    pendingMutationPopup = startingMutation.firstOrNull(),
+                    seed = 0L, 
+                    rngCount = 0
                 )
             }
+        }
+    }
+
+    private var gameRandom: GameRandom = GameRandom(0)
+    val rng: kotlin.random.Random get() = gameRandom
+
+    class GameRandom(val seed: Long) : kotlin.random.Random() {
+        private val impl = kotlin.random.Random(seed)
+        var count = 0
+            private set
+
+        override fun nextBits(bitCount: Int): Int {
+            count++
+            return impl.nextBits(bitCount)
         }
     }
 
@@ -88,7 +117,9 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
         var rotationCount: Int,
         val isDebugMode: Boolean,
         val fallingFragments: List<Pair<Int, Int>>,
-        val pendingMutationPopup: GameMechanic? = null // For showing acquired artifacts/mutations
+        val pendingMutationPopup: GameMechanic? = null, // For showing acquired artifacts/mutations
+        val seed: Long,
+        val rngCount: Int
     ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -117,6 +148,8 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
             if (isDebugMode != other.isDebugMode) return false
             if (fallingFragments != other.fallingFragments) return false
             if (pendingMutationPopup != other.pendingMutationPopup) return false
+            if (seed != other.seed) return false
+            if (rngCount != other.rngCount) return false
 
             return true
         }
@@ -143,6 +176,8 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
             result = 31 * result + isDebugMode.hashCode()
             result = 31 * result + fallingFragments.hashCode()
             result = 31 * result + (pendingMutationPopup?.hashCode() ?: 0)
+            result = 31 * result + seed.hashCode()
+            result = 31 * result + rngCount
             return result
         }
     }
@@ -259,15 +294,19 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
         Boss("The Sprinter", R.string.boss_sprinter, 15)
     )
 
-    fun newGame() {
-        newGame(emptyList(), emptyList())
+    fun newGame(seed: Long? = null) {
+        newGame(emptyList(), emptyList(), seed)
     }
 
-    fun newGame(mutations: List<Mutation>, artifacts: List<Artifact>) {
+    fun newGame(mutations: List<Mutation>, artifacts: List<Artifact>, seed: Long? = null) {
         gameJob?.cancel()
         gameJob = null
         Log.d(TAG, "Starting new game...")
         viewModelScope.launch {
+            val actualSeed = seed ?: kotlin.random.Random.nextLong()
+            gameRandom = GameRandom(actualSeed)
+            preferenceDataStore.updateLastSeed(actualSeed)
+
             val isClassicMode = preferenceDataStore.isClassicMode.first()
             val isDebugMode = mutations.isNotEmpty() || artifacts.isNotEmpty()
             val startingMutations = if (isDebugMode) {
@@ -277,10 +316,20 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
             } else {
                 val activeMutationNames = preferenceDataStore.enabledMutations.first()
                 val activeMutations = allMutations.filter { activeMutationNames.contains(it.name) }
-                if (activeMutations.isNotEmpty()) listOf(activeMutations.random()) else emptyList()
+                if (activeMutations.isNotEmpty()) listOf(activeMutations.random(gameRandom)) else emptyList()
             }
 
-            _gameState.value = GameState(createEmptyBoard(), null, Companion.pieces.random(), Companion.pieces.random(), 0, 0, emptyList(), 0, 1, 5, false, artifacts, startingMutations, null, Companion.pieces.shuffled(), 0, emptyList(), 0, isDebugMode, emptyList(), pendingMutationPopup = startingMutations.firstOrNull())
+            _gameState.value = GameState(
+                createEmptyBoard(), null, 
+                Companion.pieces.random(gameRandom), 
+                Companion.pieces.random(gameRandom), 
+                0, 0, emptyList(), 0, 1, 5, false, artifacts, startingMutations, null, 
+                Companion.pieces.shuffled(gameRandom), 
+                0, emptyList(), 0, isDebugMode, emptyList(), 
+                pendingMutationPopup = startingMutations.firstOrNull(),
+                seed = actualSeed,
+                rngCount = gameRandom.count
+            )
             applyStartingMutations()
 
             preferenceDataStore.clearSavedGame()
@@ -309,6 +358,8 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
         gameJob = null
         if (_gameState.value.piece != null) {
             viewModelScope.launch {
+                // Update RNG count in state before saving
+                _gameState.value = _gameState.value.copy(rngCount = gameRandom.count)
                 preferenceDataStore.saveGameState(_gameState.value)
             }
         }
@@ -448,8 +499,8 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
             )
 
             hooksToCheck.forEach { hookClass ->
-                if (hookClass.isInstance(newArtifact)) {
-                    currentArtifacts.removeAll { hookClass.isInstance(it) }
+                if (hookClass.isAssignableFrom(newArtifact.javaClass)) {
+                    currentArtifacts.removeAll { hookClass.isAssignableFrom(it.javaClass) }
                 }
             }
 

@@ -23,6 +23,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.res.stringResource
 import net.ljga.projects.games.tetris.R
 
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+
 @Composable
 fun MenuScreen(
     gameViewModel: GameViewModel,
@@ -135,12 +140,68 @@ fun MenuScreen(
             Spacer(modifier = Modifier.height(48.dp))
 
             // Buttons
+            var showSeedDialog by remember { mutableStateOf(false) }
+            val lastSeed by gameViewModel.lastSeed.collectAsState()
+
+            if (showSeedDialog) {
+                SeedSelectionDialog(
+                    initialSeed = lastSeed,
+                    onDismiss = { showSeedDialog = false },
+                    onStartGame = { seed -> 
+                        gameViewModel.newGame(seed)
+                        onNewGame() // Navigate
+                        showSeedDialog = false
+                    }
+                )
+            }
+
             if (gameState.piece != null && !gameState.isGameOver) {
                 MenuButton(text = stringResource(R.string.continue_game), onClick = onContinue, color = Color(0xFF2ECC71))
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            MenuButton(text = stringResource(R.string.new_game), onClick = onNewGame, color = Color(0xFF3498DB))
+            // New Game Button with Long Press (Custom implementation to avoid Button capturing clicks)
+            Surface(
+                color = Color(0xFF3498DB),
+                shape = RoundedCornerShape(16.dp),
+                shadowElevation = 8.dp,
+                modifier = Modifier
+                    .width(200.dp)
+                    .height(56.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = {
+                                showSeedDialog = true
+                            },
+                            onTap = {
+                                gameViewModel.newGame()
+                                onNewGame()
+                            }
+                        )
+                    }
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text(
+                        text = stringResource(R.string.new_game),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+            
+            lastSeed?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Last Seed: ${longToSeedString(it)}",
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
             MenuButton(text = stringResource(R.string.mutations), onClick = onMutations, color = Color(0xFF9B59B6))
@@ -256,6 +317,84 @@ fun DebugMenuDialog(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF27AE60))
                 ) {
                     Text("Start Debug Game")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SeedSelectionDialog(
+    initialSeed: Long?,
+    onDismiss: () -> Unit,
+    onStartGame: (Long?) -> Unit
+) {
+    var seedText by remember { mutableStateOf(initialSeed?.let { longToSeedString(it) } ?: "") }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFF2C3E50),
+            border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFF3498DB))
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Enter Seed Code", style = MaterialTheme.typography.titleLarge, color = Color.White)
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                OutlinedTextField(
+                    value = seedText,
+                    onValueChange = { newValue ->
+                        // Allow digits and A-Z (case insensitive, converted to upper)
+                        if (newValue.all { it.isDigit() || it.isLetter() }) {
+                            seedText = newValue.uppercase()
+                        }
+                    },
+                    label = { Text("Seed", color = Color.Gray) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.LightGray,
+                        focusedContainerColor = Color(0xFF34495E),
+                        unfocusedContainerColor = Color(0xFF34495E),
+                        cursorColor = Color(0xFF3498DB),
+                        focusedBorderColor = Color(0xFF3498DB),
+                        unfocusedBorderColor = Color.Gray
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Row(
+                   modifier = Modifier.fillMaxWidth(),
+                   horizontalArrangement = Arrangement.SpaceBetween 
+                ) {
+                    Button(
+                        onClick = { onStartGame(null) }, // Random
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Random")
+                    }
+                    
+                    Spacer(modifier = Modifier.width(16.dp))
+                    
+                    Button(
+                        onClick = { 
+                            val seed = seedStringToLong(seedText)
+                            onStartGame(seed) 
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3498DB)),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Start")
+                    }
                 }
             }
         }
