@@ -44,8 +44,26 @@ interface IOnPieceSpawnHook : GameMechanic {
 }
 
 /**
+ * Strategy for handling line clears.
+ * Replaces the default behavior of simply removing the lines.
+ */
+interface ILineClearStrategy : GameMechanic {
+    /** The number of lines this strategy applies to. */
+    val supportedLineCounts: Set<Int>
+
+    /**
+     * Execute the strategy.
+     * @param gameState The current game state.
+     * @param linesIndices The indices of the lines that are being cleared (sorted).
+     * @return The new game state.
+     */
+    suspend fun execute(gameState: GameViewModel.GameState, linesIndices: List<Int>): GameViewModel.GameState
+}
+
+/**
  * Hook called after lines are cleared.
  * Suspending function to support animations (e.g., falling fragments, time freeze).
+ * NOTE: This runs AFTER the strategy execution.
  */
 interface IOnLineClearHook : GameMechanic {
     suspend fun onLineClear(gameState: GameViewModel.GameState, linesCleared: Int): GameViewModel.GameState
@@ -322,30 +340,30 @@ class ChaosOrbArtifact : Artifact("Chaos Orb", R.string.art_chaos_orb_title, R.s
     }
 }
 
-class FallingFragmentsArtifact : Artifact("Falling Fragments", R.string.art_falling_fragments_title, R.string.art_falling_fragments_desc, R.drawable.ic_mutation_unyielding), IOnLineClearHook {
-    override suspend fun onLineClear(gameState: GameViewModel.GameState, linesCleared: Int): GameViewModel.GameState {
-        if (linesCleared == 2 || linesCleared == 4) {
-            // This logic was originally in GameViewModel and starts a coroutine.
-            // We'll need to call back into the ViewModel to start the animation.
-            // For now, we'll just add the fragments directly.
-            val random = Random()
-            val newFragments = gameState.fallingFragments.toMutableList()
-            repeat(2) {
-                newFragments.add(Pair(random.nextInt(gameState.board[0].size), 0))
-            }
-            return gameState.copy(fallingFragments = newFragments)
+class FallingFragmentsArtifact : Artifact("Falling Fragments", R.string.art_falling_fragments_title, R.string.art_falling_fragments_desc, R.drawable.ic_mutation_unyielding), ILineClearStrategy {
+    override val supportedLineCounts: Set<Int> = setOf(2, 4)
+
+    override suspend fun execute(gameState: GameViewModel.GameState, linesIndices: List<Int>): GameViewModel.GameState {
+        // First, perform standard line clearing logic
+        var state = DefaultLineClearStrategy.execute(gameState, linesIndices)
+
+        // Then add falling fragments
+        val random = Random()
+        val newFragments = state.fallingFragments.toMutableList()
+        repeat(2) {
+            newFragments.add(Pair(random.nextInt(state.board[0].size), 0))
         }
-        return gameState
+        return state.copy(fallingFragments = newFragments)
     }
 }
 
-class BoardWipeArtifact : Artifact("Board Wipe", R.string.art_board_wipe_title, R.string.art_board_wipe_desc, R.drawable.ic_mutation_unyielding), IOnLineClearHook {
-    override suspend fun onLineClear(gameState: GameViewModel.GameState, linesCleared: Int): GameViewModel.GameState {
-        if (linesCleared == 3) {
-            val newArtifacts = gameState.artifacts.filter { it.name != name }
-            return gameState.copy(board = Array(gameState.board.size) { IntArray(gameState.board[0].size) }, artifacts = newArtifacts)
-        }
-        return gameState
+class BoardWipeArtifact : Artifact("Board Wipe", R.string.art_board_wipe_title, R.string.art_board_wipe_desc, R.drawable.ic_mutation_unyielding), ILineClearStrategy {
+    override val supportedLineCounts: Set<Int> = setOf(3)
+
+    override suspend fun execute(gameState: GameViewModel.GameState, linesIndices: List<Int>): GameViewModel.GameState {
+        // Completely wipe the board instead of just clearing lines
+        val newArtifacts = gameState.artifacts.filter { it.name != name }
+        return gameState.copy(board = Array(gameState.board.size) { IntArray(gameState.board[0].size) }, artifacts = newArtifacts)
     }
 }
 
@@ -387,5 +405,15 @@ class BoardShrinkerArtifact : Artifact("Board Shrinker", R.string.art_board_shri
             }
         }
         return defaultResult
+    }
+}
+
+object DefaultLineClearStrategy {
+    fun execute(gameState: GameViewModel.GameState, linesIndices: List<Int>): GameViewModel.GameState {
+        val board = gameState.board
+        val newBoard = board.toMutableList()
+        linesIndices.sorted().reversed().forEach { newBoard.removeAt(it) }
+        repeat(linesIndices.size) { newBoard.add(0, IntArray(board[0].size)) }
+        return gameState.copy(board = newBoard.toTypedArray())
     }
 }

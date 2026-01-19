@@ -127,12 +127,15 @@ suspend fun GameViewModel.clearLines(): Int {
         _gameState.value = _gameState.value.copy(clearingLines = linesToClearList)
         delay(300)
 
-        val newBoard = board.toMutableList()
-        linesToClearList.sorted().reversed().forEach { newBoard.removeAt(it) }
-        repeat(linesToClearList.size) { newBoard.add(0, IntArray(boardWidth)) }
-        val finalBoard = newBoard.toTypedArray()
+        // Use Strategy for clearing logic
+        val strategy = _gameState.value.artifacts.filterIsInstance<ILineClearStrategy>()
+            .find { it.supportedLineCounts.contains(linesToClearList.size) }
 
-        _gameState.value = _gameState.value.copy(board = finalBoard)
+        _gameState.value = if (strategy != null) {
+            strategy.execute(_gameState.value, linesToClearList)
+        } else {
+            DefaultLineClearStrategy.execute(_gameState.value, linesToClearList)
+        }
     }
     return linesToClearList.size
 }

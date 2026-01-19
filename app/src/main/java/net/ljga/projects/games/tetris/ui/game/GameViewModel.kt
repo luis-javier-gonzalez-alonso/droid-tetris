@@ -418,12 +418,47 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
         return defaultResult
     }
 
-    fun selectArtifact(artifact: Artifact) {
+    fun selectArtifact(newArtifact: Artifact) {
         viewModelScope.launch {
+            val currentArtifacts = _gameState.value.artifacts.toMutableList()
+
+            // 1. Enforce exclusivity for standard GameMechanic hooks
+            // (Newest artifact overrides older ones implementing the same hook)
+            val hooksToCheck = listOf<Class<*>>(
+                IOnNewGameHook::class.java,
+                IOnLevelUpHook::class.java,
+                IOnPieceSpawnHook::class.java,
+                IOnLineClearHook::class.java,
+                ITickDelayModifier::class.java,
+                IScoreModifier::class.java,
+                IRotationOverride::class.java,
+                IRotationDirectionModifier::class.java,
+                IPostRotationPlacementModifier::class.java,
+                IPositionValidator::class.java,
+                IBeforeLineClearHook::class.java,
+                IRequiresGhostPiece::class.java
+            )
+
+            hooksToCheck.forEach { hookClass ->
+                if (hookClass.isInstance(newArtifact)) {
+                    currentArtifacts.removeAll { hookClass.isInstance(it) }
+                }
+            }
+
+            // 2. Special exclusivity for ILineClearStrategy (Overlap based)
+            if (newArtifact is ILineClearStrategy) {
+                val newCounts = newArtifact.supportedLineCounts
+                currentArtifacts.removeAll { existing ->
+                    existing is ILineClearStrategy && existing.supportedLineCounts.any { newCounts.contains(it) }
+                }
+            }
+
+            currentArtifacts.add(newArtifact)
+
             _gameState.value = _gameState.value.copy(
-                artifacts = _gameState.value.artifacts + artifact,
+                artifacts = currentArtifacts,
                 artifactChoices = emptyList(),
-                pendingMutationPopup = artifact
+                pendingMutationPopup = newArtifact
             )
             // Game remains paused until popup is dismissed
         }
