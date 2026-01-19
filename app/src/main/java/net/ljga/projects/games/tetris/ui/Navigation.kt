@@ -48,9 +48,6 @@ fun MainNavigation(gameViewModel: GameViewModel) {
                 navController.popBackStack()
             }
         }
-        composable("mutations") {
-            MutationsScreen(gameViewModel)
-        }
         composable("shop") {
             ShopScreen(gameViewModel) {
                 navController.popBackStack()
