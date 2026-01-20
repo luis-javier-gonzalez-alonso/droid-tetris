@@ -22,9 +22,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.WindowCompat
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
+import net.ljga.projects.games.tetris.ui.game.GameViewModel
 import net.ljga.projects.games.tetris.ui.theme.MyApplicationTheme
 
 @AndroidEntryPoint
@@ -70,7 +71,9 @@ class MainActivity : ComponentActivity() {
 
             MyApplicationTheme {
                 Surface(
-                    modifier = Modifier.fillMaxSize().padding(top = 48.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 48.dp),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     MainNavigation(gameViewModel)

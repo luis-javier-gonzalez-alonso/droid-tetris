@@ -1,4 +1,4 @@
-package net.ljga.projects.games.tetris.ui.game
+package net.ljga.projects.games.tetris.domain.support
 
 import java.util.Locale
 

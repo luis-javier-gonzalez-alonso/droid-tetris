@@ -1,6 +1,7 @@
-package net.ljga.projects.games.tetris.ui.game
+package net.ljga.projects.games.tetris.ui.game.screens
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import kotlinx.coroutines.launch
 import net.ljga.projects.games.tetris.R
+import net.ljga.projects.games.tetris.ui.game.GameViewModel
 import java.util.Locale
 
 enum class Language(val locale: String, @StringRes val nameRes: Int) {
@@ -106,7 +108,7 @@ fun SettingsScreen(
                         onClick = { expanded = true },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.Cyan)
+                        border = BorderStroke(1.dp, Color.Cyan)
                     ) {
                         Text(
                             text = stringResource(currentLanguage.nameRes),
@@ -211,7 +213,7 @@ fun SettingsSection(
     Surface(
         color = Color.Black.copy(alpha = 0.4f),
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF4CA1AF)),
+        border = BorderStroke(1.dp, Color(0xFF4CA1AF)),
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)

@@ -1,8 +1,8 @@
-package net.ljga.projects.games.tetris.ui.game
+package net.ljga.projects.games.tetris.ui.game.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -26,7 +26,13 @@ import net.ljga.projects.games.tetris.R
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import net.ljga.projects.games.tetris.domain.game.Artifact
+import net.ljga.projects.games.tetris.domain.game.Mutation
+import net.ljga.projects.games.tetris.domain.support.longToSeedString
+import net.ljga.projects.games.tetris.domain.support.seedStringToLong
+import net.ljga.projects.games.tetris.ui.game.GameViewModel
 
 @Composable
 fun MenuScreen(
@@ -83,7 +89,7 @@ fun MenuScreen(
                         ),
                         shadow = Shadow(
                             color = Color.Black,
-                            offset = androidx.compose.ui.geometry.Offset(2f, 2f),
+                            offset = Offset(2f, 2f),
                             blurRadius = 4f
                         )
                     )
@@ -98,7 +104,7 @@ fun MenuScreen(
                         ),
                         shadow = Shadow(
                             color = Color.Black,
-                            offset = androidx.compose.ui.geometry.Offset(2f, 2f),
+                            offset = Offset(2f, 2f),
                             blurRadius = 4f
                         )
                     )
@@ -111,7 +117,7 @@ fun MenuScreen(
             Surface(
                 shape = RoundedCornerShape(24.dp),
                 color = Color.Black.copy(alpha = 0.6f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF4CA1AF)),
+                border = BorderStroke(1.dp, Color(0xFF4CA1AF)),
                 modifier = Modifier.padding(horizontal = 16.dp)
             ) {
                 Row(
@@ -331,7 +337,7 @@ fun SeedSelectionDialog(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             color = Color(0xFF2C3E50),
-            border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFF3498DB))
+            border = BorderStroke(2.dp, Color(0xFF3498DB))
         ) {
             Column(
                 modifier = Modifier.padding(24.dp),

@@ -15,6 +15,47 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.map
 import net.ljga.projects.games.tetris.R
 import net.ljga.projects.games.tetris.data.GameplayDataRepository
+import net.ljga.projects.games.tetris.domain.game.Artifact
+import net.ljga.projects.games.tetris.domain.game.BoardShrinkerArtifact
+import net.ljga.projects.games.tetris.domain.game.BoardWipeArtifact
+import net.ljga.projects.games.tetris.domain.game.ChaosOrbArtifact
+import net.ljga.projects.games.tetris.domain.game.ClairvoyanceMutation
+import net.ljga.projects.games.tetris.domain.game.ColorblindMutation
+import net.ljga.projects.games.tetris.domain.game.FairPlayMutation
+import net.ljga.projects.games.tetris.domain.game.FallingFragmentsArtifact
+import net.ljga.projects.games.tetris.domain.game.FeatherFallMutation
+import net.ljga.projects.games.tetris.domain.game.GameMechanic
+import net.ljga.projects.games.tetris.domain.game.GarbageCollectorMutation
+import net.ljga.projects.games.tetris.domain.game.IBeforeLineClearHook
+import net.ljga.projects.games.tetris.domain.game.ILineClearStrategy
+import net.ljga.projects.games.tetris.domain.game.IOnLevelUpHook
+import net.ljga.projects.games.tetris.domain.game.IOnLineClearHook
+import net.ljga.projects.games.tetris.domain.game.IOnNewGameHook
+import net.ljga.projects.games.tetris.domain.game.IOnPieceSpawnHook
+import net.ljga.projects.games.tetris.domain.game.IPositionValidator
+import net.ljga.projects.games.tetris.domain.game.IPostRotationPlacementModifier
+import net.ljga.projects.games.tetris.domain.game.IRequiresGhostPiece
+import net.ljga.projects.games.tetris.domain.game.IRotationDirectionModifier
+import net.ljga.projects.games.tetris.domain.game.IRotationOverride
+import net.ljga.projects.games.tetris.domain.game.IScoreModifier
+import net.ljga.projects.games.tetris.domain.game.ITickDelayModifier
+import net.ljga.projects.games.tetris.domain.game.InvertedRotationArtifact
+import net.ljga.projects.games.tetris.domain.game.LeadFallMutation
+import net.ljga.projects.games.tetris.domain.game.LineClearerArtifact
+import net.ljga.projects.games.tetris.domain.game.MoreIsMutation
+import net.ljga.projects.games.tetris.domain.game.Mutation
+import net.ljga.projects.games.tetris.domain.game.PhantomPieceMutation
+import net.ljga.projects.games.tetris.domain.game.PieceSwapperArtifact
+import net.ljga.projects.games.tetris.domain.game.ScoreMultiplierArtifact
+import net.ljga.projects.games.tetris.domain.game.SpringLoadedRotatorArtifact
+import net.ljga.projects.games.tetris.domain.game.SwiftnessCharmArtifact
+import net.ljga.projects.games.tetris.domain.game.TimeWarpMutation
+import net.ljga.projects.games.tetris.domain.game.UnyieldingMutation
+import net.ljga.projects.games.tetris.domain.game.applyStartingMutations
+import net.ljga.projects.games.tetris.domain.game.createEmptyBoard
+import net.ljga.projects.games.tetris.domain.game.movePiece
+import net.ljga.projects.games.tetris.domain.game.runGame
+import net.ljga.projects.games.tetris.domain.game.updateGhostPiece
 import java.util.Locale
 import javax.inject.Inject
 
@@ -22,7 +63,7 @@ private const val TAG = "GameViewModel"
 
 @HiltViewModel
 class GameViewModel @Inject constructor(
-    private val gameplayDataRepository: GameplayDataRepository,
+    val gameplayDataRepository: GameplayDataRepository,
     val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
 

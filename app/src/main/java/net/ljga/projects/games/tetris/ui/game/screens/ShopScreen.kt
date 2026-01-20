@@ -1,8 +1,8 @@
-package net.ljga.projects.games.tetris.ui.game
+package net.ljga.projects.games.tetris.ui.game.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -24,6 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.ljga.projects.games.tetris.R
+import net.ljga.projects.games.tetris.domain.game.Mutation
+import net.ljga.projects.games.tetris.ui.game.GameViewModel
 
 @Composable
 fun ShopScreen(
@@ -76,7 +78,7 @@ fun ShopScreen(
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = Color.Black.copy(alpha = 0.6f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF4CA1AF)),
+                    border = BorderStroke(1.dp, Color(0xFF4CA1AF)),
                     modifier = Modifier.padding(8.dp)
                 ) {
                     Row(
@@ -239,7 +241,7 @@ fun MutationShopCard(
         colors = CardDefaults.cardColors(
             containerColor = if (isUnlocked) Color(0xFF1A1A1A) else Color(0xFF2C3E50).copy(alpha = 0.8f)
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, if (isUnlocked && isEnabled) Color(0xFF00E5FF) else if (isUnlocked) Color.Gray else Color.Transparent),
+        border = BorderStroke(1.dp, if (isUnlocked && isEnabled) Color(0xFF00E5FF) else if (isUnlocked) Color.Gray else Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Column(
@@ -306,7 +308,7 @@ fun BadgeShopCard(
         colors = CardDefaults.cardColors(
             containerColor = if (isOwned) Color(0xFF1A1A1A) else Color(0xFF2C3E50).copy(alpha = 0.8f)
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, if (isOwned) Color.Green else Color.Transparent),
+        border = BorderStroke(1.dp, if (isOwned) Color.Green else Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Column(

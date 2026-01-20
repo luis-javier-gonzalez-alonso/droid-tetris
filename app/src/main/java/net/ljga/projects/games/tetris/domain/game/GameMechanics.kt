@@ -1,8 +1,10 @@
-package net.ljga.projects.games.tetris.ui.game
+package net.ljga.projects.games.tetris.domain.game
 
+import kotlinx.coroutines.delay
 import kotlin.random.Random
 
 import net.ljga.projects.games.tetris.R
+import net.ljga.projects.games.tetris.ui.game.GameViewModel
 
 /**
  * Base interface for all game mechanics (mutations and artifacts).
@@ -213,7 +215,7 @@ class ColorblindMutation : Mutation("Colorblind", R.string.mut_colorblind_title,
 class MoreIsMutation : Mutation("More 'I's", R.string.mut_more_is_title, R.string.mut_more_is_desc, R.drawable.ic_mutation_more_is, 0.9f), IOnPieceSpawnHook {
     override fun onPieceSpawn(gameState: GameViewModel.GameState, rng: Random): GameViewModel.GameState {
         if (rng.nextInt(5) == 0) {
-            val iPiece = GameViewModel.pieces.first() // I-piece is first in the list
+            val iPiece = GameViewModel.Companion.pieces.first() // I-piece is first in the list
             return gameState.copy(piece = iPiece)
         }
         return gameState
@@ -246,7 +248,7 @@ class GarbageCollectorMutation : Mutation("Garbage Collector", R.string.mut_garb
 class TimeWarpMutation : Mutation("Time Warp", R.string.mut_time_warp_title, R.string.mut_time_warp_desc, R.drawable.ic_mutation_unyielding, 0.9f), IOnLineClearHook {
     override suspend fun onLineClear(gameState: GameViewModel.GameState, linesCleared: Int, rng: Random): GameViewModel.GameState {
         if (linesCleared > 0 && rng.nextInt(10) == 0) {
-            kotlinx.coroutines.delay(2000)
+            delay(2000)
         }
         return gameState
     }
@@ -256,7 +258,7 @@ class FairPlayMutation : Mutation("Fair Play", R.string.mut_fair_play_title, R.s
     override fun onPieceSpawn(gameState: GameViewModel.GameState, rng: Random): GameViewModel.GameState {
         var queue = gameState.pieceQueue
         if (queue.isEmpty()) {
-            queue = GameViewModel.pieces.shuffled(rng)
+            queue = GameViewModel.Companion.pieces.shuffled(rng)
         }
         val piece = queue.first()
         var nextQueue = queue.drop(1)
@@ -264,12 +266,12 @@ class FairPlayMutation : Mutation("Fair Play", R.string.mut_fair_play_title, R.s
         var nextPiece = gameState.nextPiece
         var secondNextPiece = gameState.secondNextPiece
         if (nextQueue.isEmpty()) {
-            nextQueue = GameViewModel.pieces.shuffled(rng)
+            nextQueue = GameViewModel.Companion.pieces.shuffled(rng)
         }
         nextPiece = nextQueue.first()
         nextQueue = nextQueue.drop(1)
         if (nextQueue.isEmpty()) {
-            nextQueue = GameViewModel.pieces.shuffled(rng)
+            nextQueue = GameViewModel.Companion.pieces.shuffled(rng)
         }
         secondNextPiece = nextQueue.first()
         return gameState.copy(
@@ -317,7 +319,7 @@ class SpringLoadedRotatorArtifact : Artifact("Spring-loaded Rotator", R.string.a
 
 class ChaosOrbArtifact : Artifact("Chaos Orb", R.string.art_chaos_orb_title, R.string.art_chaos_orb_desc, R.drawable.ic_mutation_unyielding), IRotationOverride {
     override fun onRotate(gameState: GameViewModel.GameState, gameViewModel: GameViewModel): GameViewModel.GameState {
-        val newPiece = GameViewModel.pieces.random(gameViewModel.rng)
+        val newPiece = GameViewModel.Companion.pieces.random(gameViewModel.rng)
         var rotatedShape = newPiece.shape
         val numRotations = gameViewModel.rng.nextInt(4)
         for (i in 0 until numRotations) {

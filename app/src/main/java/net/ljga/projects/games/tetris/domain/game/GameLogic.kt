@@ -1,5 +1,4 @@
-
-package net.ljga.projects.games.tetris.ui.game
+package net.ljga.projects.games.tetris.domain.game
 
 import android.util.Log
 import androidx.lifecycle.viewModelScope
@@ -7,7 +6,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import net.ljga.projects.games.tetris.data.GameplayDataRepository
+import net.ljga.projects.games.tetris.ui.game.GameViewModel
 import net.ljga.projects.games.tetris.ui.game.GameViewModel.Companion.pieces
+import kotlin.collections.forEach
 
 private const val TAG = "GameLogic"
 

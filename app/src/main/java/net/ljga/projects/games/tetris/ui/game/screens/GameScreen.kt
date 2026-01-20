@@ -1,13 +1,12 @@
-package net.ljga.projects.games.tetris.ui.game
+package net.ljga.projects.games.tetris.ui.game.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -31,6 +30,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import net.ljga.projects.games.tetris.R.*
+import net.ljga.projects.games.tetris.domain.game.Artifact
+import net.ljga.projects.games.tetris.domain.game.BoardShrinkerArtifact
+import net.ljga.projects.games.tetris.domain.game.ClairvoyanceMutation
+import net.ljga.projects.games.tetris.domain.game.GameMechanic
+import net.ljga.projects.games.tetris.domain.game.PhantomPieceMutation
+import net.ljga.projects.games.tetris.ui.game.GameViewModel
 
 @Composable
 fun GameScreen(
@@ -69,7 +74,7 @@ fun GameScreen(
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = Color(0xFF2C3E50),
-                    border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFE74C3C))
+                    border = BorderStroke(2.dp, Color(0xFFE74C3C))
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
@@ -150,7 +155,7 @@ fun GameScreen(
                 ) {
                     Surface(
                         color = Color.Black.copy(alpha = 0.6f),
-                        border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFF4CA1AF)), // Board Border
+                        border = BorderStroke(2.dp, Color(0xFF4CA1AF)), // Board Border
                         shape = RoundedCornerShape(4.dp),
                         modifier = Modifier
                             .aspectRatio(gameViewModel.boardWidth.toFloat() / gameViewModel.boardHeight.toFloat())
@@ -290,7 +295,7 @@ fun ArtifactSelectionDialog(
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = Color(0xFF2C3E50),
-            border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFF00E5FF))
+            border = BorderStroke(2.dp, Color(0xFF00E5FF))
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -315,7 +320,7 @@ fun ArtifactSelectionDialog(
                                 },
                             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                             colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A1A)),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.Gray)
+                            border = BorderStroke(1.dp, Color.Gray)
                         ) {
                             Column(
                                 modifier = Modifier
@@ -376,7 +381,7 @@ fun MutationPopup(
                 },
             shape = RoundedCornerShape(16.dp),
             color = Color(0xFF2C3E50),
-            border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFFFFD700))
+            border = BorderStroke(2.dp, Color(0xFFFFD700))
         ) {
             Column(
                 modifier = Modifier.padding(32.dp),
@@ -392,7 +397,7 @@ fun MutationPopup(
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(stringResource(mechanic.titleResId), style = MaterialTheme.typography.titleLarge, color = Color.White)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(stringResource(mechanic.descResId), style = MaterialTheme.typography.bodyLarge, textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = Color.LightGray)
+                Text(stringResource(mechanic.descResId), style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center, color = Color.LightGray)
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(stringResource(string.tap_continue), style = MaterialTheme.typography.labelMedium, color = Color.Gray)
             }
