@@ -38,7 +38,7 @@ fun GameScreen(
     onBack: () -> Unit = {}
 ) {
     val gameState by gameViewModel.gameState.collectAsState()
-    val sensitivity by gameViewModel.preferenceDataStore.touchSensitivity.collectAsState(initial = 2.0f)
+    val sensitivity by gameViewModel.settingsDataStore.touchSensitivity.collectAsState(initial = 2.0f)
     val coroutineScope = rememberCoroutineScope()
 
     var accumulatedDragX by remember { mutableFloatStateOf(0f) }

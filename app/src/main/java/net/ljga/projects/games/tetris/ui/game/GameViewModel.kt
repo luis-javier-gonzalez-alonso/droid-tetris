@@ -18,7 +18,7 @@ import java.util.Locale
 
 private const val TAG = "GameViewModel"
 
-class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() {
+class GameViewModel(val gameDataStore: GameDataStore, val settingsDataStore: SettingsDataStore) : ViewModel() {
 
     val boardWidth = 10
     val boardHeight = 20
@@ -36,19 +36,19 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
     private var _mutations = MutableStateFlow<List<Mutation>>(emptyList())
     val mutations: StateFlow<List<Mutation>> = _mutations
 
-    val coins: StateFlow<Int> = preferenceDataStore.coins
+    val coins: StateFlow<Int> = gameDataStore.coins
         .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
     
-    val ownedBadges: StateFlow<Set<String>> = preferenceDataStore.ownedBadges
+    val ownedBadges: StateFlow<Set<String>> = gameDataStore.ownedBadges
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
 
-    val unlockedMutations: StateFlow<Set<String>> = preferenceDataStore.unlockedMutations
+    val unlockedMutations: StateFlow<Set<String>> = gameDataStore.unlockedMutations
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
 
-    val enabledMutations: StateFlow<Set<String>> = preferenceDataStore.enabledMutations
+    val enabledMutations: StateFlow<Set<String>> = gameDataStore.enabledMutations
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
 
-    val lastSeed: StateFlow<Long?> = preferenceDataStore.lastSeed
+    val lastSeed: StateFlow<Long?> = settingsDataStore.lastSeed
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     var debugMutations: List<Mutation> = emptyList()
@@ -58,11 +58,11 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
 
     init {
         viewModelScope.launch {
-            _highScore.value = preferenceDataStore.highScore.first()
-            val activeMutationNames = preferenceDataStore.enabledMutations.first()
+            _highScore.value = gameDataStore.highScore.first()
+            val activeMutationNames = gameDataStore.enabledMutations.first()
             _mutations.value = allMutations.filter { activeMutationNames.contains(it.name) }
 
-            preferenceDataStore.gameState.first()?.let {
+            gameDataStore.gameState.first()?.let {
                 _gameState.value = it
                 // Restore RNG state
                 gameRandom = GameRandom(it.seed)
@@ -305,16 +305,16 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
         viewModelScope.launch {
             val actualSeed = seed ?: kotlin.random.Random.nextLong()
             gameRandom = GameRandom(actualSeed)
-            preferenceDataStore.updateLastSeed(actualSeed)
+            settingsDataStore.updateLastSeed(actualSeed)
 
-            val isClassicMode = preferenceDataStore.isClassicMode.first()
+            val isClassicMode = settingsDataStore.isClassicMode.first()
             val isDebugMode = mutations.isNotEmpty() || artifacts.isNotEmpty()
             val startingMutations = if (isDebugMode) {
                 mutations
             } else if (isClassicMode) {
                 emptyList()
             } else {
-                val activeMutationNames = preferenceDataStore.enabledMutations.first()
+                val activeMutationNames = gameDataStore.enabledMutations.first()
                 val activeMutations = allMutations.filter { activeMutationNames.contains(it.name) }
                 if (activeMutations.isNotEmpty()) listOf(activeMutations.random(gameRandom)) else emptyList()
             }
@@ -332,7 +332,7 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
             )
             applyStartingMutations()
 
-            preferenceDataStore.clearSavedGame()
+            gameDataStore.clearSavedGame()
             
             // Only run game immediately if there is NO popup pending
             // If there is a popup, we wait for dismissal
@@ -342,7 +342,7 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
         }
     }
 
-    val languageCode: StateFlow<String> = preferenceDataStore.languageCode
+    val languageCode: StateFlow<String> = settingsDataStore.languageCode
         .map { code ->
             if (code.isNullOrEmpty()) {
                 val systemLang = Locale.getDefault().language
@@ -360,7 +360,7 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
             viewModelScope.launch {
                 // Update RNG count in state before saving
                 _gameState.value = _gameState.value.copy(rngCount = gameRandom.count)
-                preferenceDataStore.saveGameState(_gameState.value)
+                gameDataStore.saveGameState(_gameState.value)
             }
         }
         Log.d(TAG, "Game paused.")
@@ -530,15 +530,15 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
 
     fun purchaseBadge(badgeName: String, cost: Int) {
         viewModelScope.launch {
-            preferenceDataStore.purchaseBadge(badgeName, cost)
+            gameDataStore.purchaseBadge(badgeName, cost)
         }
     }
 
     fun purchaseMutation(mutationName: String, cost: Int) {
         viewModelScope.launch {
-            if (preferenceDataStore.purchaseMutation(mutationName, cost)) {
+            if (gameDataStore.purchaseMutation(mutationName, cost)) {
                 // Update local list if needed, though flows handle it
-                val enabled = preferenceDataStore.enabledMutations.first()
+                val enabled = gameDataStore.enabledMutations.first()
                 _mutations.value = allMutations.filter { enabled.contains(it.name) }
             }
         }
@@ -546,18 +546,18 @@ class GameViewModel(val preferenceDataStore: PreferenceDataStore) : ViewModel() 
 
     fun toggleMutation(mutationName: String, enabled: Boolean) {
         viewModelScope.launch {
-            preferenceDataStore.setMutationEnabled(mutationName, enabled)
-            val updatedEnabled = preferenceDataStore.enabledMutations.first()
+            gameDataStore.setMutationEnabled(mutationName, enabled)
+            val updatedEnabled = gameDataStore.enabledMutations.first()
             _mutations.value = allMutations.filter { updatedEnabled.contains(it.name) }
         }
     }
 }
 
-class GameViewModelFactory(private val preferenceDataStore: PreferenceDataStore) : ViewModelProvider.Factory {
+class GameViewModelFactory(private val gameDataStore: GameDataStore, private val settingsDataStore: SettingsDataStore) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(GameViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return GameViewModel(preferenceDataStore) as T
+            return GameViewModel(gameDataStore, settingsDataStore) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

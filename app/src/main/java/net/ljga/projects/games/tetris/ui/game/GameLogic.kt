@@ -78,7 +78,7 @@ fun GameViewModel.endGame() {
     if (_gameState.value.currentScore > highScore.value) {
         _highScore.value = _gameState.value.currentScore
         viewModelScope.launch {
-            preferenceDataStore.updateHighScore(_gameState.value.currentScore)
+            gameDataStore.updateHighScore(_gameState.value.currentScore)
         }
     }
     
@@ -86,14 +86,14 @@ fun GameViewModel.endGame() {
     val coinsEarned = _gameState.value.currentScore / 100
     if (coinsEarned > 0) {
         viewModelScope.launch {
-            preferenceDataStore.addCoins(coinsEarned)
+            gameDataStore.addCoins(coinsEarned)
         }
     }
 
     _gameState.value = _gameState.value.copy(isGameOver = true)
     gameJob?.cancel()
     gameJob = null
-    viewModelScope.launch { preferenceDataStore.clearSavedGame() }
+    viewModelScope.launch { gameDataStore.clearSavedGame() }
 }
 
 fun GameViewModel.movePiece(dx: Int, dy: Int): Boolean {
@@ -321,7 +321,7 @@ fun GameViewModel.updateGhostPiece() {
 
 fun GameViewModel.addRandomMutationToRun() {
     viewModelScope.launch {
-        val activeMutationNames = preferenceDataStore.enabledMutations.first()
+        val activeMutationNames = gameDataStore.enabledMutations.first()
         val availableMutations = allMutations.filter { activeMutationNames.contains(it.name) && !_gameState.value.selectedMutations.contains(it) }
         if (availableMutations.isNotEmpty()) {
             val newMutation = availableMutations.random(rng)

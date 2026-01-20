@@ -25,16 +25,17 @@ import androidx.core.os.LocaleListCompat
 import androidx.core.view.WindowCompat
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
+import net.ljga.projects.games.tetris.ui.game.GameDataStore
 import net.ljga.projects.games.tetris.ui.game.GameViewModel
 import net.ljga.projects.games.tetris.ui.game.GameViewModelFactory
-import net.ljga.projects.games.tetris.ui.game.PreferenceDataStore
+import net.ljga.projects.games.tetris.ui.game.SettingsDataStore
 import net.ljga.projects.games.tetris.ui.theme.MyApplicationTheme
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val gameViewModel: GameViewModel by viewModels {
-        GameViewModelFactory(PreferenceDataStore(this))
+        GameViewModelFactory(GameDataStore(this), SettingsDataStore(this))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,7 +47,7 @@ class MainActivity : ComponentActivity() {
             val useDarkIcons = !isSystemInDarkTheme()
             val context = LocalContext.current
 
-            val languageCode by gameViewModel.preferenceDataStore.languageCode.collectAsState(initial = null)
+            val languageCode by gameViewModel.settingsDataStore.languageCode.collectAsState(initial = null)
 
             LaunchedEffect(languageCode) {
                 val code = languageCode

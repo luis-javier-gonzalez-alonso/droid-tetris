@@ -29,8 +29,9 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import net.ljga.projects.games.tetris.R
+import net.ljga.projects.games.tetris.ui.game.GameDataStore
 import net.ljga.projects.games.tetris.ui.game.GameViewModel
-import net.ljga.projects.games.tetris.ui.game.PreferenceDataStore
+import net.ljga.projects.games.tetris.ui.game.SettingsDataStore
 
 class BadgeWidgetConfigActivity : ComponentActivity() {
 
@@ -57,11 +58,12 @@ class BadgeWidgetConfigActivity : ComponentActivity() {
             return
         }
 
-        val preferenceDataStore = PreferenceDataStore(applicationContext)
-        val gameViewModel = GameViewModel(preferenceDataStore) // Create instance here
+        val gameDataStore = GameDataStore(applicationContext)
+        val settingsDataStore = SettingsDataStore(applicationContext)
+        val gameViewModel = GameViewModel(gameDataStore, settingsDataStore) // Create instance here
 
         setContent {
-            val ownedBadges by preferenceDataStore.ownedBadges.collectAsState(initial = emptySet())
+            val ownedBadges by gameDataStore.ownedBadges.collectAsState(initial = emptySet())
             
             Column(
                 modifier = Modifier

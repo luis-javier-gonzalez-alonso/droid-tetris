@@ -34,9 +34,9 @@ fun SettingsScreen(
     viewModel: GameViewModel,
     onBack: () -> Unit
 ) {
-    val languageCode by viewModel.preferenceDataStore.languageCode.collectAsState(initial = "system")
-    val isClassicMode by viewModel.preferenceDataStore.isClassicMode.collectAsState(initial = false)
-    val touchSensitivity by viewModel.preferenceDataStore.touchSensitivity.collectAsState(initial = 2.0f)
+    val languageCode by viewModel.settingsDataStore.languageCode.collectAsState(initial = "system")
+    val isClassicMode by viewModel.settingsDataStore.isClassicMode.collectAsState(initial = false)
+    val touchSensitivity by viewModel.settingsDataStore.touchSensitivity.collectAsState(initial = 2.0f)
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -132,7 +132,7 @@ fun SettingsScreen(
                                 onClick = {
                                     expanded = false
                                     coroutineScope.launch {
-                                        viewModel.preferenceDataStore.setLanguageCode(lang.locale)
+                                        viewModel.settingsDataStore.setLanguageCode(lang.locale)
                                     }
                                 }
                             )
@@ -149,7 +149,7 @@ fun SettingsScreen(
                         .padding(16.dp)
                         .clickable {
                             coroutineScope.launch {
-                                viewModel.preferenceDataStore.setClassicMode(!isClassicMode)
+                                viewModel.settingsDataStore.setClassicMode(!isClassicMode)
                             }
                         },
                     verticalAlignment = Alignment.CenterVertically,
@@ -164,7 +164,7 @@ fun SettingsScreen(
                         checked = isClassicMode,
                         onCheckedChange = { checked ->
                             coroutineScope.launch {
-                                viewModel.preferenceDataStore.setClassicMode(checked)
+                                viewModel.settingsDataStore.setClassicMode(checked)
                             }
                         },
                         colors = SwitchDefaults.colors(
@@ -187,7 +187,7 @@ fun SettingsScreen(
                         value = touchSensitivity,
                         onValueChange = { newValue ->
                             coroutineScope.launch {
-                                viewModel.preferenceDataStore.setTouchSensitivity(newValue)
+                                viewModel.settingsDataStore.setTouchSensitivity(newValue)
                             }
                         },
                         valueRange = 1f..5f,
