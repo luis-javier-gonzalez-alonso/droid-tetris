@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
+import net.ljga.projects.games.tetris.data.GameplayDataRepository
 import net.ljga.projects.games.tetris.ui.game.GameViewModel.Companion.pieces
 
 private const val TAG = "GameLogic"
@@ -66,7 +67,7 @@ fun GameViewModel.runGame() {
                     }
                     if (!spawnNewPiece()) {
                         Log.d(TAG, "Game Over.")
-                        endGame()
+                        endGame(gameplayDataRepository)
                     }
                 }.join()
             }
@@ -74,11 +75,11 @@ fun GameViewModel.runGame() {
     }
 }
 
-fun GameViewModel.endGame() {
+fun GameViewModel.endGame(gameplayDataRepository: GameplayDataRepository) {
     if (_gameState.value.currentScore > highScore.value) {
         _highScore.value = _gameState.value.currentScore
         viewModelScope.launch {
-            gameDataStore.updateHighScore(_gameState.value.currentScore)
+            gameplayDataRepository.updateHighScore(_gameState.value.currentScore)
         }
     }
     
@@ -86,14 +87,14 @@ fun GameViewModel.endGame() {
     val coinsEarned = _gameState.value.currentScore / 100
     if (coinsEarned > 0) {
         viewModelScope.launch {
-            gameDataStore.addCoins(coinsEarned)
+            gameplayDataRepository.addCoins(coinsEarned)
         }
     }
 
     _gameState.value = _gameState.value.copy(isGameOver = true)
     gameJob?.cancel()
     gameJob = null
-    viewModelScope.launch { gameDataStore.clearSavedGame() }
+    viewModelScope.launch { gameplayDataRepository.clearGameState() }
 }
 
 fun GameViewModel.movePiece(dx: Int, dy: Int): Boolean {
@@ -203,7 +204,7 @@ suspend fun GameViewModel.updateScoreAndLevel(linesCleared: Int) {
             if (currentBoss.requiredLines <= 0) {
                 _gameState.value = _gameState.value.copy(currentScore = _gameState.value.currentScore + 5000 * _gameState.value.level)
                 // unlockNextMutation() - REMOVED for Badge Shop system
-                addRandomMutationToRun()
+                addRandomMutationToRun(gameplayDataRepository)
                 currentBoss = null
             }
         }
@@ -319,9 +320,9 @@ fun GameViewModel.updateGhostPiece() {
     _gameState.value = state.copy(ghostPieceY = ghostY)
 }
 
-fun GameViewModel.addRandomMutationToRun() {
+fun GameViewModel.addRandomMutationToRun(gameplayDataRepository: GameplayDataRepository) {
     viewModelScope.launch {
-        val activeMutationNames = gameDataStore.enabledMutations.first()
+        val activeMutationNames = gameplayDataRepository.enabledMutations.first()
         val availableMutations = allMutations.filter { activeMutationNames.contains(it.name) && !_gameState.value.selectedMutations.contains(it) }
         if (availableMutations.isNotEmpty()) {
             val newMutation = availableMutations.random(rng)

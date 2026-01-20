@@ -26,13 +26,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import net.ljga.projects.games.tetris.R
-import net.ljga.projects.games.tetris.ui.game.GameDataStore
 import net.ljga.projects.games.tetris.ui.game.GameViewModel
-import net.ljga.projects.games.tetris.ui.game.SettingsDataStore
 
+@AndroidEntryPoint
 class BadgeWidgetConfigActivity : ComponentActivity() {
 
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
@@ -58,12 +59,9 @@ class BadgeWidgetConfigActivity : ComponentActivity() {
             return
         }
 
-        val gameDataStore = GameDataStore(applicationContext)
-        val settingsDataStore = SettingsDataStore(applicationContext)
-        val gameViewModel = GameViewModel(gameDataStore, settingsDataStore) // Create instance here
-
         setContent {
-            val ownedBadges by gameDataStore.ownedBadges.collectAsState(initial = emptySet())
+            val gameViewModel: GameViewModel = hiltViewModel()
+            val ownedBadges by gameViewModel.ownedBadges.collectAsState(initial = emptySet())
             
             Column(
                 modifier = Modifier
@@ -82,7 +80,7 @@ class BadgeWidgetConfigActivity : ComponentActivity() {
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 80.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedby(8.dp)
                 ) {
                     items(gameViewModel.allBadges.filter { ownedBadges.contains(it.id) }) { badge ->
                         Card(

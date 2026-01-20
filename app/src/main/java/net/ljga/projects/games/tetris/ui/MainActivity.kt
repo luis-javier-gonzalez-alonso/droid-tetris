@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.os.LocaleList
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,31 +22,25 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.WindowCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
-import net.ljga.projects.games.tetris.ui.game.GameDataStore
-import net.ljga.projects.games.tetris.ui.game.GameViewModel
-import net.ljga.projects.games.tetris.ui.game.GameViewModelFactory
-import net.ljga.projects.games.tetris.ui.game.SettingsDataStore
 import net.ljga.projects.games.tetris.ui.theme.MyApplicationTheme
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
-    private val gameViewModel: GameViewModel by viewModels {
-        GameViewModelFactory(GameDataStore(this), SettingsDataStore(this))
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
+            val gameViewModel = hiltViewModel<GameViewModel>()
             val systemUiController = rememberSystemUiController()
             val useDarkIcons = !isSystemInDarkTheme()
             val context = LocalContext.current
 
-            val languageCode by gameViewModel.settingsDataStore.languageCode.collectAsState(initial = null)
+            val languageCode by gameViewModel.languageCode.collectAsState(initial = null)
 
             LaunchedEffect(languageCode) {
                 val code = languageCode

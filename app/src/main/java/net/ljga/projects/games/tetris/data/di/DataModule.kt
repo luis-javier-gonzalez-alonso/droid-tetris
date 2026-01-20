@@ -1,49 +1,93 @@
-/*
- * Copyright (C) 2022 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package net.ljga.projects.games.tetris.data.di
 
-import dagger.Binds
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
-import net.ljga.projects.games.tetris.data.StatisticsRepository
-import net.ljga.projects.games.tetris.data.DefaultStatisticsRepository
-import javax.inject.Inject
+import net.ljga.projects.games.tetris.data.GameplayDataRepository
+import net.ljga.projects.games.tetris.data.local.database.EnabledMutationDao
+import net.ljga.projects.games.tetris.data.local.database.GameProgressDao
+import net.ljga.projects.games.tetris.data.local.database.OwnedBadgeDao
+import net.ljga.projects.games.tetris.data.local.database.UnlockedMutationDao
+import net.ljga.projects.games.tetris.ui.game.Artifact
+import net.ljga.projects.games.tetris.ui.game.BoardShrinkerArtifact
+import net.ljga.projects.games.tetris.ui.game.BoardWipeArtifact
+import net.ljga.projects.games.tetris.ui.game.ChaosOrbArtifact
+import net.ljga.projects.games.tetris.ui.game.ClairvoyanceMutation
+import net.ljga.projects.games.tetris.ui.game.ColorblindMutation
+import net.ljga.projects.games.tetris.ui.game.FairPlayMutation
+import net.ljga.projects.games.tetris.ui.game.FallingFragmentsArtifact
+import net.ljga.projects.games.tetris.ui.game.FeatherFallMutation
+import net.ljga.projects.games.tetris.ui.game.GarbageCollectorMutation
+import net.ljga.projects.games.tetris.ui.game.InvertedRotationArtifact
+import net.ljga.projects.games.tetris.ui.game.LeadFallMutation
+import net.ljga.projects.games.tetris.ui.game.LineClearerArtifact
+import net.ljga.projects.games.tetris.ui.game.MoreIsMutation
+import net.ljga.projects.games.tetris.ui.game.Mutation
+import net.ljga.projects.games.tetris.ui.game.PhantomPieceMutation
+import net.ljga.projects.games.tetris.ui.game.PieceSwapperArtifact
+import net.ljga.projects.games.tetris.ui.game.RuntimeTypeAdapterFactory
+import net.ljga.projects.games.tetris.ui.game.ScoreMultiplierArtifact
+import net.ljga.projects.games.tetris.ui.game.SpringLoadedRotatorArtifact
+import net.ljga.projects.games.tetris.ui.game.SwiftnessCharmArtifact
+import net.ljga.projects.games.tetris.ui.game.TimeWarpMutation
+import net.ljga.projects.games.tetris.ui.game.UnyieldingMutation
 import javax.inject.Singleton
 
-@Module
 @InstallIn(SingletonComponent::class)
-interface DataModule {
+@Module
+object DataModule {
 
+    @Provides
     @Singleton
-    @Binds
-    fun bindsStatisticsRepository(
-        statisticsRepository: DefaultStatisticsRepository
-    ): StatisticsRepository
-}
+    fun provideGson(): Gson {
+        return GsonBuilder()
+            .registerTypeAdapterFactory(
+                RuntimeTypeAdapterFactory(Artifact::class)
+                    .registerSubtype(SwiftnessCharmArtifact::class)
+                    .registerSubtype(LineClearerArtifact::class)
+                    .registerSubtype(ScoreMultiplierArtifact::class)
+                    .registerSubtype(SpringLoadedRotatorArtifact::class)
+                    .registerSubtype(ChaosOrbArtifact::class)
+                    .registerSubtype(FallingFragmentsArtifact::class)
+                    .registerSubtype(BoardWipeArtifact::class)
+                    .registerSubtype(InvertedRotationArtifact::class)
+                    .registerSubtype(PieceSwapperArtifact::class)
+                    .registerSubtype(BoardShrinkerArtifact::class)
+            )
+            .registerTypeAdapterFactory(
+                RuntimeTypeAdapterFactory(Mutation::class)
+                    .registerSubtype(UnyieldingMutation::class)
+                    .registerSubtype(FeatherFallMutation::class)
+                    .registerSubtype(LeadFallMutation::class)
+                    .registerSubtype(ClairvoyanceMutation::class)
+                    .registerSubtype(ColorblindMutation::class)
+                    .registerSubtype(MoreIsMutation::class)
+                    .registerSubtype(GarbageCollectorMutation::class)
+                    .registerSubtype(TimeWarpMutation::class)
+                    .registerSubtype(FairPlayMutation::class)
+                    .registerSubtype(PhantomPieceMutation::class)
+            )
+            .create()
+    }
 
-class FakeStatisticsRepository @Inject constructor() : StatisticsRepository {
-    override val statisticss: Flow<List<String>> = flowOf(fakeStatisticss)
-
-    override suspend fun add(name: String) {
-        throw NotImplementedError()
+    @Provides
+    @Singleton
+    fun provideGameplayDataRepository(
+        gameProgressDao: GameProgressDao,
+        unlockedMutationDao: UnlockedMutationDao,
+        enabledMutationDao: EnabledMutationDao,
+        ownedBadgeDao: OwnedBadgeDao,
+        gson: Gson
+    ): GameplayDataRepository {
+        return GameplayDataRepository(
+            gameProgressDao,
+            unlockedMutationDao,
+            enabledMutationDao,
+            ownedBadgeDao,
+            gson
+        )
     }
 }
-
-val fakeStatisticss = listOf("One", "Two", "Three")

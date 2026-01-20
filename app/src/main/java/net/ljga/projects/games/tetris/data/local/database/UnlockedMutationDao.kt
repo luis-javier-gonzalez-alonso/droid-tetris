@@ -7,10 +7,10 @@ import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface HighScoreDao {
-    @Query("SELECT * FROM high_scores WHERE id = 1")
-    fun getHighScore(): Flow<HighScore?>
+interface UnlockedMutationDao {
+    @Query("SELECT * FROM unlocked_mutations")
+    fun getUnlockedMutations(): Flow<List<UnlockedMutation>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun updateHighScore(highScore: HighScore)
+    suspend fun addUnlockedMutation(unlockedMutation: UnlockedMutation)
 }
