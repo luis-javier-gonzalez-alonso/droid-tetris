@@ -1,4 +1,4 @@
-package net.ljga.projects.games.tetris.model.data
+package net.ljga.projects.games.tetris.data.local.database
 
 import androidx.room.Dao
 import androidx.room.Insert
